@@ -1,0 +1,13 @@
+{
+  "name": "splitsettl",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-powered invoice splitting and streaming settlement protocol on HashKey Chain",
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "compile": "cd contracts && npm run compile",
+    "test": "cd contracts && npm run test",
+    "deploy": "cd contracts && npm run deploy:testnet"
+  }
+}
