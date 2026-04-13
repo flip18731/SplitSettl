@@ -1,7 +1,8 @@
+import { DEMO_ADDRESSES } from "./constants";
+
 export interface Contributor {
   address: string;
   name: string;
-  avatar: string;
   splitBps: number;
   totalEarned: number;
 }
@@ -14,7 +15,9 @@ export interface Payment {
   currency: string;
   invoiceRef: string;
   hspRequestId: string;
-  hspStatus: "requested" | "confirmed" | "receipt";
+  hspStatus: "receipt" | "confirmed" | "pending";
+  /** 0=none, 1=request, 2=confirmed, 3=receipt */
+  hspSteps: number;
   timestamp: Date;
   contributors: { address: string; name: string; amount: number }[];
   txHash: string;
@@ -31,68 +34,10 @@ export interface Project {
   description: string;
 }
 
-const CONTRIBUTORS: Record<string, Contributor> = {
-  alice: {
-    address: "0x1a2B...3c4D",
-    name: "Alice Chen",
-    avatar: "AC",
-    splitBps: 0,
-    totalEarned: 0,
-  },
-  bob: {
-    address: "0x2b3C...4d5E",
-    name: "Bob Kumar",
-    avatar: "BK",
-    splitBps: 0,
-    totalEarned: 0,
-  },
-  carol: {
-    address: "0x3c4D...5e6F",
-    name: "Carol Zhang",
-    avatar: "CZ",
-    splitBps: 0,
-    totalEarned: 0,
-  },
-  dave: {
-    address: "0x4d5E...6f7A",
-    name: "Dave Wilson",
-    avatar: "DW",
-    splitBps: 0,
-    totalEarned: 0,
-  },
-  eve: {
-    address: "0x5e6F...7a8B",
-    name: "Eve Martinez",
-    avatar: "EM",
-    splitBps: 0,
-    totalEarned: 0,
-  },
-  frank: {
-    address: "0x6f7A...8b9C",
-    name: "Frank Li",
-    avatar: "FL",
-    splitBps: 0,
-    totalEarned: 0,
-  },
-  grace: {
-    address: "0x7a8B...9c0D",
-    name: "Grace Park",
-    avatar: "GP",
-    splitBps: 0,
-    totalEarned: 0,
-  },
-  henry: {
-    address: "0x8b9C...0d1E",
-    name: "Henry Zhao",
-    avatar: "HZ",
-    splitBps: 0,
-    totalEarned: 0,
-  },
-};
-
 function daysAgo(n: number): Date {
   const d = new Date();
   d.setDate(d.getDate() - n);
+  d.setHours(d.getHours() - Math.floor(Math.random() * 12));
   return d;
 }
 
@@ -104,7 +49,7 @@ function makePayment(
   invoiceRef: string,
   hspReqId: string,
   daysBack: number,
-  contribs: { key: string; pct: number }[]
+  contribs: { key: string; name: string; pct: number }[]
 ): Payment {
   return {
     id,
@@ -115,59 +60,52 @@ function makePayment(
     invoiceRef,
     hspRequestId: hspReqId,
     hspStatus: "receipt",
+    hspSteps: 3,
     timestamp: daysAgo(daysBack),
     contributors: contribs.map((c) => ({
-      address: CONTRIBUTORS[c.key].address,
-      name: CONTRIBUTORS[c.key].name,
+      address: DEMO_ADDRESSES[c.key as keyof typeof DEMO_ADDRESSES] || c.key,
+      name: c.name,
       amount: parseFloat(((amount * c.pct) / 100).toFixed(2)),
     })),
-    txHash: `0x${id.replace(/[^a-f0-9]/gi, "")}${"a".repeat(60)}`.slice(0, 66),
+    txHash: `0x${id.replace(/[^a-f0-9]/gi, "")}${"a4b7c2d9e1f0".repeat(6)}`.slice(0, 66),
   };
 }
 
+const p1Contribs = [
+  { key: "alice", name: "Alice", pct: 40 },
+  { key: "bob", name: "Bob", pct: 35 },
+  { key: "carol", name: "Carol", pct: 25 },
+];
+const p2Contribs = [
+  { key: "dave", name: "Dave", pct: 55 },
+  { key: "eve", name: "Eve", pct: 45 },
+];
+const p3Contribs = [
+  { key: "alice", name: "Alice", pct: 30 },
+  { key: "frank", name: "Frank", pct: 25 },
+  { key: "grace", name: "Grace", pct: 25 },
+  { key: "henry", name: "Henry", pct: 20 },
+];
+
 const project1Payments: Payment[] = [
-  makePayment("p1-1", 0, "HashKey DeFi SDK", 500, "INV-2024-001", "HSP-REQ-001", 28, [
-    { key: "alice", pct: 40 }, { key: "bob", pct: 35 }, { key: "carol", pct: 25 },
-  ]),
-  makePayment("p1-2", 0, "HashKey DeFi SDK", 750, "INV-2024-002", "HSP-REQ-002", 21, [
-    { key: "alice", pct: 40 }, { key: "bob", pct: 35 }, { key: "carol", pct: 25 },
-  ]),
-  makePayment("p1-3", 0, "HashKey DeFi SDK", 1000, "INV-2024-003", "HSP-REQ-003", 14, [
-    { key: "alice", pct: 40 }, { key: "bob", pct: 35 }, { key: "carol", pct: 25 },
-  ]),
-  makePayment("p1-4", 0, "HashKey DeFi SDK", 300, "INV-2024-008", "HSP-REQ-008", 7, [
-    { key: "alice", pct: 40 }, { key: "bob", pct: 35 }, { key: "carol", pct: 25 },
-  ]),
-  makePayment("p1-5", 0, "HashKey DeFi SDK", 1200, "INV-2024-009", "HSP-REQ-009", 2, [
-    { key: "alice", pct: 40 }, { key: "bob", pct: 35 }, { key: "carol", pct: 25 },
-  ]),
+  makePayment("p1-1", 0, "HashKey DeFi SDK", 1800, "INV-0021", "HSP-021", 28, p1Contribs),
+  makePayment("p1-2", 0, "HashKey DeFi SDK", 2200, "INV-0022", "HSP-022", 21, p1Contribs),
+  makePayment("p1-3", 0, "HashKey DeFi SDK", 1500, "INV-0023", "HSP-023", 14, p1Contribs),
+  makePayment("p1-4", 0, "HashKey DeFi SDK", 950, "INV-0025", "HSP-025", 7, p1Contribs),
+  makePayment("p1-5", 0, "HashKey DeFi SDK", 1200, "INV-0028", "HSP-028", 1, p1Contribs),
 ];
 
 const project2Payments: Payment[] = [
-  makePayment("p2-1", 1, "NFT Marketplace Frontend", 800, "INV-2024-004", "HSP-REQ-004", 20, [
-    { key: "dave", pct: 55 }, { key: "eve", pct: 45 },
-  ]),
-  makePayment("p2-2", 1, "NFT Marketplace Frontend", 600, "INV-2024-005", "HSP-REQ-005", 10, [
-    { key: "dave", pct: 55 }, { key: "eve", pct: 45 },
-  ]),
-  makePayment("p2-3", 1, "NFT Marketplace Frontend", 950, "INV-2024-010", "HSP-REQ-010", 3, [
-    { key: "dave", pct: 55 }, { key: "eve", pct: 45 },
-  ]),
+  makePayment("p2-1", 1, "NFT Marketplace", 1600, "INV-0016", "HSP-016", 22, p2Contribs),
+  makePayment("p2-2", 1, "NFT Marketplace", 1400, "INV-0019", "HSP-019", 12, p2Contribs),
+  makePayment("p2-3", 1, "NFT Marketplace", 1850, "INV-0026", "HSP-026", 3, p2Contribs),
 ];
 
 const project3Payments: Payment[] = [
-  makePayment("p3-1", 2, "Smart Contract Audit Tool", 2000, "INV-2024-006", "HSP-REQ-006", 25, [
-    { key: "alice", pct: 30 }, { key: "frank", pct: 25 }, { key: "grace", pct: 25 }, { key: "henry", pct: 20 },
-  ]),
-  makePayment("p3-2", 2, "Smart Contract Audit Tool", 1500, "INV-2024-007", "HSP-REQ-007", 18, [
-    { key: "alice", pct: 30 }, { key: "frank", pct: 25 }, { key: "grace", pct: 25 }, { key: "henry", pct: 20 },
-  ]),
-  makePayment("p3-3", 2, "Smart Contract Audit Tool", 1800, "INV-2024-011", "HSP-REQ-011", 9, [
-    { key: "alice", pct: 30 }, { key: "frank", pct: 25 }, { key: "grace", pct: 25 }, { key: "henry", pct: 20 },
-  ]),
-  makePayment("p3-4", 2, "Smart Contract Audit Tool", 900, "INV-2024-012", "HSP-REQ-012", 1, [
-    { key: "alice", pct: 30 }, { key: "frank", pct: 25 }, { key: "grace", pct: 25 }, { key: "henry", pct: 20 },
-  ]),
+  makePayment("p3-1", 2, "SC Audit Tool", 2000, "INV-0017", "HSP-017", 25, p3Contribs),
+  makePayment("p3-2", 2, "SC Audit Tool", 1700, "INV-0020", "HSP-020", 18, p3Contribs),
+  makePayment("p3-3", 2, "SC Audit Tool", 2100, "INV-0024", "HSP-024", 9, p3Contribs),
+  makePayment("p3-4", 2, "SC Audit Tool", 1350, "INV-0027", "HSP-027", 2, p3Contribs),
 ];
 
 export const DEMO_PROJECTS: Project[] = [
@@ -177,41 +115,41 @@ export const DEMO_PROJECTS: Project[] = [
     owner: "0x9c0D...1e2F",
     description: "Core DeFi primitives and SDK for building on HashKey Chain",
     contributors: [
-      { ...CONTRIBUTORS.alice, splitBps: 4000, totalEarned: 1500 },
-      { ...CONTRIBUTORS.bob, splitBps: 3500, totalEarned: 1312.5 },
-      { ...CONTRIBUTORS.carol, splitBps: 2500, totalEarned: 937.5 },
+      { ...{ address: DEMO_ADDRESSES.alice, name: "Alice" }, splitBps: 4000, totalEarned: 3060 },
+      { ...{ address: DEMO_ADDRESSES.bob, name: "Bob" }, splitBps: 3500, totalEarned: 2677.5 },
+      { ...{ address: DEMO_ADDRESSES.carol, name: "Carol" }, splitBps: 2500, totalEarned: 1912.5 },
     ],
-    totalPaid: 3750,
+    totalPaid: 7650,
     payments: project1Payments,
-    createdAt: daysAgo(35),
+    createdAt: daysAgo(42),
   },
   {
     id: 1,
-    name: "NFT Marketplace Frontend",
+    name: "NFT Marketplace",
     owner: "0x9c0D...1e2F",
-    description: "Modern NFT marketplace UI with HashKey Chain integration",
+    description: "Modern NFT marketplace with HashKey Chain integration",
     contributors: [
-      { ...CONTRIBUTORS.dave, splitBps: 5500, totalEarned: 1292.5 },
-      { ...CONTRIBUTORS.eve, splitBps: 4500, totalEarned: 1057.5 },
+      { ...{ address: DEMO_ADDRESSES.dave, name: "Dave" }, splitBps: 5500, totalEarned: 2667.5 },
+      { ...{ address: DEMO_ADDRESSES.eve, name: "Eve" }, splitBps: 4500, totalEarned: 2182.5 },
     ],
-    totalPaid: 2350,
+    totalPaid: 4850,
     payments: project2Payments,
-    createdAt: daysAgo(30),
+    createdAt: daysAgo(35),
   },
   {
     id: 2,
-    name: "Smart Contract Audit Tool",
+    name: "SC Audit Tool",
     owner: "0x9c0D...1e2F",
-    description: "AI-powered smart contract vulnerability scanner and audit report generator",
+    description: "AI-powered smart contract vulnerability scanner",
     contributors: [
-      { ...CONTRIBUTORS.alice, splitBps: 3000, totalEarned: 1860 },
-      { ...CONTRIBUTORS.frank, splitBps: 2500, totalEarned: 1550 },
-      { ...CONTRIBUTORS.grace, splitBps: 2500, totalEarned: 1550 },
-      { ...CONTRIBUTORS.henry, splitBps: 2000, totalEarned: 1240 },
+      { ...{ address: DEMO_ADDRESSES.alice, name: "Alice" }, splitBps: 3000, totalEarned: 2145 },
+      { ...{ address: DEMO_ADDRESSES.frank, name: "Frank" }, splitBps: 2500, totalEarned: 1787.5 },
+      { ...{ address: DEMO_ADDRESSES.grace, name: "Grace" }, splitBps: 2500, totalEarned: 1787.5 },
+      { ...{ address: DEMO_ADDRESSES.henry, name: "Henry" }, splitBps: 2000, totalEarned: 1430 },
     ],
-    totalPaid: 6200,
+    totalPaid: 7150,
     payments: project3Payments,
-    createdAt: daysAgo(32),
+    createdAt: daysAgo(38),
   },
 ];
 
@@ -222,9 +160,8 @@ export const ALL_PAYMENTS: Payment[] = [
 ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
 export const DEMO_STATS = {
-  totalPaymentsProcessed: 12300,
+  totalPaymentsProcessed: 19650,
   activeProjects: 3,
   totalContributors: 8,
-  aiInvoicesGenerated: 15,
-  totalPaymentCount: 12,
+  aiInvoicesGenerated: 28,
 };

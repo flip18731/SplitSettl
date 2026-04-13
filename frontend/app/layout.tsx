@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 
 export const metadata: Metadata = {
-  title: "SplitSettl — AI-Powered Invoice Splitting & Settlement",
-  description: "AI-powered invoice splitting and streaming settlement protocol for freelancers and DAO contributors on HashKey Chain",
+  title: "SplitSettl — AI-Powered Payment Splitting on HashKey Chain",
+  description:
+    "An AI agent that analyzes contributions, generates invoices, and automatically splits payments to team members via HSP on HashKey Chain.",
 };
 
 export default function RootLayout({
@@ -15,12 +15,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-[#0A0A0F] min-h-screen">
-        <Sidebar />
-        <div className="ml-[240px] min-h-screen">
-          <Header />
-          <main className="p-8">{children}</main>
-        </div>
+      <body className="bg-bg-primary min-h-screen text-text-primary">
+        <Header />
+        <main className="max-w-[1200px] mx-auto px-8 py-6">{children}</main>
       </body>
     </html>
   );

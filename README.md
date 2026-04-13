@@ -1,75 +1,59 @@
 # SplitSettl
 
-**AI-Powered Invoice Splitting & Streaming Settlement Protocol on HashKey Chain**
+**AI-Powered Payment Splitting on HashKey Chain**
 
-> Automatically analyze work contributions, generate invoices, and split payments to multiple contributors — all on-chain with full HSP audit trails.
+> An AI agent that analyzes contributions, generates invoices, and automatically splits payments to team members via HSP.
 
 ---
 
 ## Problem
 
-Freelancers and DAO contributors working on collaborative projects face a recurring pain point: **splitting payments fairly is manual, opaque, and slow.** Project leads must manually track contributions, calculate splits, create invoices, and execute multiple transactions — often across weeks and with no on-chain audit trail. This creates payment delays, disputes, and trust issues.
+Freelancer teams working for DAOs get paid in lump sums. Splitting payments is manual, error-prone, and lacks transparency. There's no standard for automated, AI-driven payment splitting in Web3.
 
 ## Solution
 
-**SplitSettl** uses an AI agent (Claude) to analyze contributor work data (GitHub commits, task completions, hours logged), automatically determine fair payment splits with transparent justifications, and execute settlement through smart contracts on HashKey Chain. Every payment flows through the **HSP (HashKey Settlement Protocol)** lifecycle — Request, Confirmation, Receipt — providing a complete, immutable audit trail.
+SplitSettl uses an AI agent to analyze work contributions (GitHub commits, task completions), recommend fair splits with transparent justifications, and generate invoices. Payments are split automatically on-chain via smart contracts on HashKey Chain. The full payment lifecycle is tracked through HSP (Request, Confirmation, Receipt) with an immutable audit trail.
 
 ---
 
 ## Architecture
 
 ```
-+-----------------------------------------------------+
-|                  Frontend (Next.js)                   |
-|  +----------+  +----------+  +-------------------+   |
-|  | Dashboard |  | Projects |  | AI Invoice        |   |
-|  | Overview  |  | & Splits |  | Generator         |   |
-|  +----------+  +----------+  +-------------------+   |
-+------------------------+----------------------------+
-                         |
-+------------------------v----------------------------+
-|              AI Agent Service (Backend)               |
-|  +--------------+  +----------------------------+    |
-|  | Contribution  |  | Invoice Generator          |    |
-|  | Analyzer     |  | (Claude API -> structured  |    |
-|  | (GitHub/Task)|  |  invoice data)             |    |
-|  +------+-------+  +------------+---------------+    |
-+---------+---------------------------+----------------+
-          |                           |
-+---------v---------------------------v----------------+
-|            Smart Contracts (HashKey Chain)             |
-|  +--------------+  +----------------------------+    |
-|  | SplitSettl   |  | HSP Integration            |    |
-|  | .sol         |  | (Payment Request ->        |    |
-|  | (Splits,     |  |  Confirmation -> Receipt)  |    |
-|  |  Payments,   |  |                            |    |
-|  |  History)    |  +----------------------------+    |
-|  +--------------+                                    |
-+------------------------------------------------------+
+Frontend (Next.js)
+├── Dashboard      Stats + live payment feed + flow canvas + AI agent status
+├── Projects       List + detail with team splits and payment history
+├── Invoices       AI invoice generator (THE KEY DEMO PAGE)
+└── API Routes
+    ├── /api/ai/analyze     Claude API for contribution analysis
+    └── /api/hsp/status     HSP status tracking
+
+Smart Contracts (HashKey Chain Testnet)
+├── SplitSettl.sol          Project registry, payment splitting, HSP events
+└── Deploy + Seed scripts   Pre-populated demo data
 ```
 
 ---
 
-## HSP Integration (HashKey Settlement Protocol)
+## How HSP is Used
 
-HSP is deeply integrated into every payment flow in SplitSettl:
+HSP (HashKey Settlement Protocol) is deeply integrated into every payment flow:
 
-1. **Payment Request** — When an invoice is approved, an HSP Payment Request is created on-chain with full details (amount, recipients, split ratios). Event: `HSPRequestCreated`
-2. **Payment Confirmation** — After the smart contract splits and distributes funds, the payment is confirmed through HSP. Event: `HSPConfirmed`
-3. **Receipt Generation** — A settlement receipt is generated with the transaction hash, providing an immutable audit trail. Event: `HSPReceiptGenerated`
+1. **Payment Request** — When an AI-generated invoice is approved, an HSP Payment Request is created on-chain with full details (amount, recipients, split ratios). Event: `HSPRequestCreated`
+2. **Payment Confirmation** — After the smart contract splits and distributes funds to contributors, the payment is confirmed through HSP. Event: `HSPConfirmed`
+3. **Receipt Issued** — A settlement receipt is generated with the transaction hash, providing an immutable on-chain audit trail. Event: `HSPReceiptIssued`
 
-All HSP message IDs are stored on-chain for full traceability. The frontend displays the HSP flow as a visual pipeline for each payment.
+All HSP message IDs are stored on-chain. The frontend displays the HSP flow as a segmented progress bar and step-by-step timeline for every payment.
 
 ---
 
-## AI Integration
+## How AI is Used
 
-SplitSettl uses **Claude** (Anthropic's AI) to:
+SplitSettl uses **Claude** (Anthropic) to:
 
-- **Analyze Contributions** — Parse GitHub commit data, task completions, and hours to understand each contributor's impact
-- **Recommend Fair Splits** — Generate percentage-based payment splits with transparent justifications
-- **Generate Invoices** — Create structured invoices with line items, rates, and totals
-- **Automate Payment Flows** — Trigger the full HSP settlement flow after invoice approval
+- **Analyze Contributions** — Parse GitHub commit data, task completions, and hours to assess each contributor's impact
+- **Recommend Fair Splits** — Generate percentage-based splits with transparent, data-driven justifications
+- **Generate Invoices** — Create structured invoices with line items, hourly rates, and totals
+- **Automate Settlement** — Trigger the full HSP payment flow after invoice approval
 
 ---
 
@@ -77,39 +61,12 @@ SplitSettl uses **Claude** (Anthropic's AI) to:
 
 | Layer | Technology |
 |-------|-----------|
-| Blockchain | HashKey Chain (OP Stack L2, Chain ID: 133) |
+| Blockchain | HashKey Chain Testnet (OP Stack L2, Chain ID: 133) |
 | Smart Contracts | Solidity 0.8.19, Hardhat |
 | Frontend | Next.js 14, TypeScript, Tailwind CSS |
-| AI Engine | Anthropic Claude API |
+| AI Engine | Anthropic Claude API (`claude-sonnet-4-20250514`) |
 | Settlement | HSP (HashKey Settlement Protocol) |
-| Wallet | MetaMask (ethers.js v6) |
-
----
-
-## Project Structure
-
-```
-splitsettl/
-├── contracts/
-│   ├── SplitSettl.sol          # Core smart contract
-│   ├── interfaces/IERC20.sol   # ERC-20 interface
-│   ├── hardhat.config.ts       # Hardhat configuration
-│   ├── scripts/
-│   │   ├── deploy.ts           # Deploy to HashKey Testnet
-│   │   └── seed.ts             # Seed demo data
-│   └── test/
-│       └── SplitSettl.test.ts  # Contract tests
-├── frontend/
-│   ├── app/
-│   │   ├── page.tsx            # Dashboard
-│   │   ├── projects/           # Project management
-│   │   ├── invoice/            # AI Invoice Generator
-│   │   └── api/                # API routes (AI, HSP)
-│   ├── components/             # UI components
-│   ├── lib/                    # Utilities & config
-│   └── hooks/                  # React hooks
-└── README.md
-```
+| Wallet | MetaMask, ethers.js v6 |
 
 ---
 
@@ -121,7 +78,7 @@ splitsettl/
 - MetaMask browser extension
 - HSK testnet tokens (for gas)
 
-### 1. Install Dependencies
+### Install
 
 ```bash
 # Smart contracts
@@ -131,51 +88,40 @@ cd contracts && npm install
 cd ../frontend && npm install
 ```
 
-### 2. Configure Environment
+### Configure
 
 ```bash
 cp .env.example .env
-# Edit .env with your private key and API keys
+# Add your private key and Anthropic API key
 ```
 
-### 3. Deploy Smart Contract
+### Deploy
 
 ```bash
 cd contracts
 npm run compile
 npm run deploy:testnet
-```
-
-### 4. Seed Demo Data
-
-```bash
 npm run seed
 ```
 
-### 5. Run Frontend
+### Run
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
 ## Demo Flow
 
-1. **Dashboard** — View real-time stats, live payment feed, and AI activity
-2. **AI Invoice** — Paste GitHub contribution data, click "Generate Invoice with AI"
-3. **Review** — See AI-recommended splits with justifications
-4. **Pay** — Click "Approve & Pay" to watch the animated HSP settlement flow
-5. **Verify** — Check payment history with complete HSP audit trail
-
----
-
-## Screenshots
-
-*Coming soon — see demo video*
+1. **Dashboard** — Real-time stats, animated flow canvas, live payment feed, AI agent status
+2. **AI Invoice** — Paste contribution data, click "Generate Invoice with AI"
+3. **Review** — AI-generated invoice with split rationale for each contributor
+4. **Settle** — Click "Approve & Settle" to watch the animated HSP flow step-by-step
+5. **Verify** — Return to dashboard, check payment history with HSP audit trail
 
 ---
 
