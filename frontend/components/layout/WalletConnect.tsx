@@ -48,12 +48,14 @@ export default function WalletConnect() {
   if (address) {
     return (
       <div className="flex items-center gap-3">
-        <div className="glass-card px-3 py-1.5 rounded-lg flex items-center gap-2">
-          <span className="text-xs text-[#00B894] font-medium">{balance} HSK</span>
-        </div>
-        <button className="glass-card px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-[rgba(255,255,255,0.06)] transition-colors">
-          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#00B894] to-[#6C5CE7]" />
-          <span className="text-xs text-white font-medium">{shortenAddress(address)}</span>
+        <span className="text-[12px] font-mono text-text-tertiary">
+          {balance} HSK
+        </span>
+        <button className="flex items-center gap-2.5 bg-bg-surface border border-border rounded-full px-4 py-2 hover:border-border-hover transition-colors">
+          <span className="w-[6px] h-[6px] rounded-full bg-accent-teal pulse-glow" />
+          <span className="text-[12px] font-medium text-text-primary font-mono">
+            {shortenAddress(address)}
+          </span>
         </button>
       </div>
     );
@@ -63,9 +65,12 @@ export default function WalletConnect() {
     <button
       onClick={handleConnect}
       disabled={connecting}
-      className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#00B894] to-[#00B894]/80 text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+      className="flex items-center gap-2.5 bg-bg-surface border border-border rounded-full px-4 py-2 hover:border-accent-teal transition-colors disabled:opacity-50"
     >
-      {connecting ? "Connecting..." : "Connect Wallet"}
+      <span className="w-[6px] h-[6px] rounded-full bg-text-tertiary" />
+      <span className="text-[12px] font-medium text-text-tertiary">
+        {connecting ? "Connecting..." : "Connect Wallet"}
+      </span>
     </button>
   );
 }

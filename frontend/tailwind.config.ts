@@ -9,28 +9,37 @@ const config: Config = {
     extend: {
       colors: {
         bg: {
-          primary: "#0A0A0F",
-          card: "rgba(255, 255, 255, 0.03)",
+          primary: "#0F1117",
+          surface: "#171A24",
+          elevated: "#1C2030",
         },
         border: {
-          subtle: "rgba(255, 255, 255, 0.06)",
+          DEFAULT: "#252A38",
+          hover: "#353A4D",
         },
         accent: {
-          green: "#00B894",
-          purple: "#6C5CE7",
-          yellow: "#FDCB6E",
+          teal: "#2DD4A8",
+          "teal-dim": "#1A8B6E",
+          "teal-bg": "rgba(45, 212, 168, 0.094)",
+          orange: "#F59E42",
+          "orange-dim": "#B87420",
+          "orange-bg": "rgba(245, 158, 66, 0.094)",
         },
         text: {
-          primary: "#FFFFFF",
-          secondary: "rgba(255, 255, 255, 0.6)",
-          tertiary: "rgba(255, 255, 255, 0.35)",
+          primary: "#E8ECF0",
+          secondary: "#8B93A8",
+          tertiary: "#5A6275",
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["Plus Jakarta Sans", "sans-serif"],
+        mono: ["JetBrains Mono", "monospace"],
       },
       borderRadius: {
-        card: "16px",
+        sm: "8px",
+        md: "12px",
+        lg: "16px",
+        xl: "20px",
       },
     },
   },
