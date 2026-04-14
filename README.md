@@ -107,6 +107,10 @@ Drop a `.splitsettle.json` file in any GitHub repo root to auto-configure contri
 
 Keys are GitHub usernames (login). When found, invoices display an **Auto-configured** badge and show shortened wallet addresses for each contributor.
 
+### Address in commit messages (optional)
+
+You can put a **valid 40-character hex address** (`0x` + 40 hex chars) in a **commit message** of that contributor. On the next analysis, SplitSettl picks the first valid address found in that author’s commits (in addition to `.splitsettle.json`). See [`docs/WALLET_IN_COMMIT_MESSAGES.md`](docs/WALLET_IN_COMMIT_MESSAGES.md).
+
 ---
 
 ## How AI is Used

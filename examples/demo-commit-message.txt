@@ -1,0 +1,4 @@
+# Copy-paste example (one line) for a real git commit message:
+# Replace the address with your HashKey Chain wallet before committing.
+
+chore: SplitSettl — register payout wallet 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045

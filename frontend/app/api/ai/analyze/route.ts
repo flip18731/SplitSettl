@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAddress, isAddress } from "ethers";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 interface CommitData {
   sha: string;
+  /** First line (subject) — for compact display */
   message: string;
+  /** Full commit message body — needed for wallet 0x… in later lines */
+  fullMessage: string;
   author: string;
   login: string; // GitHub username (login), used to match .splitsettle.json
   date: string;
@@ -29,6 +33,26 @@ interface ContributorSummary {
   languages: string[];
   commitDates: string[];
   dailyActivity: Record<string, number>;
+}
+
+/** First valid 0x…40 hex address found in commit messages (per contributor). */
+function findWalletInCommitMessages(messages: string[]): string | undefined {
+  const re = /\b0x[a-fA-F0-9]{40}\b/g;
+  for (const text of messages) {
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      const raw = m[0];
+      if (isAddress(raw)) {
+        try {
+          return getAddress(raw);
+        } catch {
+          /* invalid checksum edge */
+        }
+      }
+    }
+  }
+  return undefined;
 }
 
 async function fetchGitHub(url: string) {
@@ -58,9 +82,11 @@ async function fetchRepoCommits(
       const detail = await fetchGitHub(
         `https://api.github.com/repos/${owner}/${repo}/commits/${commit.sha}`
       );
+      const fullMsg = commit.commit.message || "";
       detailed.push({
         sha: commit.sha.substring(0, 7),
-        message: commit.commit.message.split("\n")[0],
+        message: fullMsg.split("\n")[0],
+        fullMessage: fullMsg,
         author: commit.commit.author.name,
         login: (commit.author?.login as string) || commit.commit.author.name,
         date: commit.commit.author.date,
@@ -454,23 +480,32 @@ Return this exact JSON structure:
           }));
         }
 
-        // Attach wallet address from .splitsettle.json if available
+        // 1) .splitsettle.json (GitHub login → address)
+        const contributor = contributors.find((c) => c.name === split.name);
         if (splitSettleConfig?.contributors) {
-          const contributor = contributors.find((c) => c.name === split.name);
           const login = contributor?.login || split.name;
-          // Try login first, then display name
           const addr =
             splitSettleConfig.contributors[login] ||
             splitSettleConfig.contributors[split.name];
           if (addr) split.walletAddress = addr;
         }
+        // 2) Ethereum address embedded in this contributor's commit messages
+        if (!split.walletAddress && contributor) {
+          const fromMsg = findWalletInCommitMessages(
+            contributor.commits.map((cm) => cm.fullMessage)
+          );
+          if (fromMsg) split.walletAddress = fromMsg;
+        }
       }
     }
 
-    // Flag whether auto address configuration was found
+    const anySplitHasWallet =
+      result.splits?.some((s: { walletAddress?: string }) => !!s.walletAddress) ??
+      false;
     result.hasAddressConfig =
-      splitSettleConfig !== null &&
-      Object.keys(splitSettleConfig.contributors || {}).length > 0;
+      (splitSettleConfig !== null &&
+        Object.keys(splitSettleConfig.contributors || {}).length > 0) ||
+      anySplitHasWallet;
 
     // Ensure all invoice items have impactRating
     if (result.invoice?.items) {
