@@ -115,29 +115,99 @@ function groupByAuthor(commits: CommitData[]): ContributorSummary[] {
   });
 }
 
+function computeFallbackScores(c: ContributorSummary, all: ContributorSummary[]) {
+  const highComplexLangs = ["sol", "rs", "go"];
+  const medComplexLangs = ["ts", "tsx", "py", "js", "jsx", "css"];
+
+  const hasHigh = c.languages.some((l) => highComplexLangs.includes(l));
+  const hasMed = c.languages.some((l) => medComplexLangs.includes(l));
+  const complexity = hasHigh ? 80 : hasMed ? 55 : 25;
+
+  const featCount = c.commits.filter((cm) => /^feat/i.test(cm.message)).length;
+  const fixCount = c.commits.filter((cm) => /^fix/i.test(cm.message)).length;
+  const featureImpact = Math.min(100, featCount * 18 + fixCount * 10 + 15);
+
+  const maxFiles = Math.max(...all.map((a) => a.filesChanged.length), 1);
+  const scopeBreadth = Math.min(
+    100,
+    Math.round((c.filesChanged.length / maxFiles) * 100)
+  );
+
+  const uniqueDays = Array.from(
+    new Set(c.commitDates.map((d) => d.substring(0, 10)))
+  ).length;
+  const consistency = Math.min(100, uniqueDays * 18);
+
+  const maxLines = Math.max(
+    ...all.map((a) => a.totalAdditions + a.totalDeletions),
+    1
+  );
+  const totalLines = c.totalAdditions + c.totalDeletions;
+  const volume = Math.round((totalLines / maxLines) * 100);
+
+  return { complexity, featureImpact, scopeBreadth, consistency, volume };
+}
+
+function computeImpactRating(scores: {
+  complexity: number;
+  featureImpact: number;
+  scopeBreadth: number;
+  consistency: number;
+  volume: number;
+}): "HIGH" | "MEDIUM" | "LOW" {
+  const weighted =
+    scores.complexity * 0.3 +
+    scores.featureImpact * 0.3 +
+    scores.scopeBreadth * 0.15 +
+    scores.consistency * 0.15 +
+    scores.volume * 0.1;
+  if (weighted >= 60) return "HIGH";
+  if (weighted >= 35) return "MEDIUM";
+  return "LOW";
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { repoUrl, totalBudget = 1200, branch = "main" } = await req.json();
 
     const match = repoUrl?.match(/github\.com\/([^/]+)\/([^/\s?#]+)/);
     if (!match) {
-      return NextResponse.json({ error: "Invalid GitHub URL" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid GitHub URL" },
+        { status: 400 }
+      );
     }
     const [, owner, rawRepo] = match;
     const repo = rawRepo.replace(".git", "");
 
     const commits = await fetchRepoCommits(owner, repo, branch);
     if (commits.length === 0) {
-      return NextResponse.json({ error: "No commits found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "No commits found" },
+        { status: 404 }
+      );
     }
 
     const contributors = groupByAuthor(commits);
+
+    // Extract code snippets for the front-end code scan animation
+    const codeSnippets = commits
+      .filter((c) => c.patch && c.patch.length > 20)
+      .slice(0, 8)
+      .map((c) => ({
+        file: c.files[0]?.name || "unknown",
+        author: c.author,
+        code: (c.patch || "").substring(0, 300),
+      }));
 
     // Build context for Claude
     const context = contributors
       .map((c) => {
         const top5 = c.commits
-          .sort((a, b) => b.additions + b.deletions - (a.additions + a.deletions))
+          .sort(
+            (a, b) =>
+              b.additions + b.deletions - (a.additions + a.deletions)
+          )
           .slice(0, 5);
 
         return `
@@ -172,16 +242,36 @@ ${top5
           },
           body: JSON.stringify({
             model: "claude-sonnet-4-20250514",
-            max_tokens: 1500,
-            system: `You are the AI payment agent for SplitSettl on HashKey Chain. You analyze REAL GitHub commits with actual code diffs to determine fair payment splits.
+            max_tokens: 2500,
+            system: `You are the AI payment agent for SplitSettl on HashKey Chain. You analyze REAL GitHub commits with actual code diffs to determine fair payment splits based on IMPACT, not just quantity.
 
-Weight factors: code complexity (smart contracts > config > docs), meaningful additions (not whitespace), feature impact (new features > refactors > fixes), file importance (core contracts > tests > docs).
+CRITICAL SCORING PHILOSOPHY:
+- A contributor with 5 high-complexity commits (new smart contract, security fix, core algorithm) should receive MORE than someone with 20 low-complexity commits (documentation edits, config changes, formatting fixes)
+- Quality of code matters more than quantity of commits
+- New feature implementation is weighted highest
+- Security-related changes are weighted very high
+- Smart contract code (.sol files) is weighted higher than frontend or config
+- Test code is valuable but weighted less than the code it tests
+- Documentation is valuable but weighted least
 
-Respond ONLY with valid JSON. No markdown fences, no preamble. Budget: $${totalBudget}.`,
+For each contributor, evaluate 5 dimensions on a 0-100 scale:
+- complexity: How technically complex is their code? (algorithms, smart contracts = high; config, docs = low)
+- featureImpact: Did they build new capabilities or make minor tweaks? (new features, critical fixes = high; typos, formatting = low)
+- scopeBreadth: How many different areas of the codebase did they affect? (many modules = high; single file = low)
+- consistency: Was their work spread over time or one big dump? (steady cadence = high; single burst = low)
+- volume: Raw output quantity (highest commit count and lines = high, BUT this dimension matters LEAST)
+
+Assign an overall impactRating: "HIGH", "MEDIUM", or "LOW".
+
+For each contributor, cite 1-2 specific commits (by SHA) as key evidence for your assessment.
+
+The percentage splits MUST sum to exactly 100. The total budget is $${totalBudget}.
+
+Respond ONLY with valid JSON. No markdown, no backticks, no preamble.`,
             messages: [
               {
                 role: "user",
-                content: `Analyze real contributions for ${owner}/${repo} and generate a payment split:
+                content: `Analyze real contributions for ${owner}/${repo} (branch: ${branch}) and generate a payment split:
 
 ${context}
 
@@ -194,8 +284,19 @@ Return this exact JSON structure:
     {
       "name": "author name",
       "percentage": 40,
+      "impactRating": "HIGH",
+      "impactScores": {
+        "complexity": 85,
+        "featureImpact": 92,
+        "scopeBreadth": 60,
+        "consistency": 75,
+        "volume": 45
+      },
       "justification": "evidence-based explanation referencing specific commits and code",
-      "keyContributions": ["description referencing actual files and features"]
+      "keyContributions": ["description referencing actual files and features"],
+      "keyEvidence": [
+        { "sha": "abc1234", "message": "feat: implement feature", "impact": "HIGH", "additions": 204 }
+      ]
     }
   ],
   "invoice": {
@@ -210,12 +311,14 @@ Return this exact JSON structure:
         "linesAdded": 1847,
         "linesDeleted": 423,
         "topFiles": ["file1.sol", "file2.ts"],
+        "impactRating": "HIGH",
         "amount": 480
       }
     ],
     "total": ${totalBudget},
     "currency": "USDT"
-  }
+  },
+  "aiSummary": "2-3 sentence summary of the analysis highlighting who leads in what dimensions"
 }`,
               },
             ],
@@ -285,6 +388,57 @@ Return this exact JSON structure:
       })),
     };
 
+    // Attach code snippets
+    result.codeSnippets = codeSnippets;
+
+    // Ensure aiSummary exists
+    if (!result.aiSummary) {
+      result.aiSummary = contributors
+        .map(
+          (c) =>
+            `${c.name}: ${c.commits.length} commits across ${c.filesChanged.length} files`
+        )
+        .join(". ") + ".";
+    }
+
+    // Ensure all splits have required fields
+    if (result.splits) {
+      for (const split of result.splits) {
+        if (!split.impactScores) {
+          const contributor = contributors.find((c) => c.name === split.name);
+          if (contributor) {
+            split.impactScores = computeFallbackScores(contributor, contributors);
+          } else {
+            split.impactScores = { complexity: 50, featureImpact: 50, scopeBreadth: 50, consistency: 50, volume: 50 };
+          }
+        }
+        if (!split.impactRating) {
+          split.impactRating = computeImpactRating(split.impactScores);
+        }
+        if (!split.keyEvidence) {
+          const contributor = contributors.find((c) => c.name === split.name);
+          split.keyEvidence = (contributor?.commits || []).slice(0, 2).map((cm) => ({
+            sha: cm.sha,
+            message: cm.message,
+            impact: split.impactRating,
+            additions: cm.additions,
+          }));
+        }
+      }
+    }
+
+    // Ensure all invoice items have impactRating
+    if (result.invoice?.items) {
+      for (const item of result.invoice.items) {
+        if (!item.impactRating) {
+          const split = result.splits?.find(
+            (s: { name: string }) => s.name === item.contributor
+          );
+          item.impactRating = split?.impactRating || "MEDIUM";
+        }
+      }
+    }
+
     return NextResponse.json(result);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed";
@@ -307,16 +461,29 @@ function buildFallbackFromGitHub(
   );
 
   const splits = contributors.map((c) => {
-    const share = totalLines > 0
-      ? Math.round(((c.totalAdditions + c.totalDeletions) / totalLines) * 100)
-      : Math.round(100 / contributors.length);
+    const share =
+      totalLines > 0
+        ? Math.round(
+            ((c.totalAdditions + c.totalDeletions) / totalLines) * 100
+          )
+        : Math.round(100 / contributors.length);
+
+    const scores = computeFallbackScores(c, contributors);
+    const rating = computeImpactRating(scores);
+
     return {
       name: c.name,
       percentage: share,
+      impactRating: rating,
+      impactScores: scores,
       justification: `${c.commits.length} commits with +${c.totalAdditions}/-${c.totalDeletions} lines across ${c.filesChanged.length} files. Languages: ${c.languages.join(", ") || "various"}.`,
-      keyContributions: c.commits
-        .slice(0, 3)
-        .map((cm) => cm.message),
+      keyContributions: c.commits.slice(0, 3).map((cm) => cm.message),
+      keyEvidence: c.commits.slice(0, 2).map((cm) => ({
+        sha: cm.sha,
+        message: cm.message,
+        impact: rating as "HIGH" | "MEDIUM" | "LOW",
+        additions: cm.additions,
+      })),
     };
   });
 
@@ -338,6 +505,8 @@ function buildFallbackFromGitHub(
       items: contributors.map((c) => {
         const pct =
           splits.find((s) => s.name === c.name)?.percentage || 0;
+        const rating =
+          splits.find((s) => s.name === c.name)?.impactRating || "MEDIUM";
         return {
           contributor: c.name,
           description: c.commits
@@ -348,11 +517,18 @@ function buildFallbackFromGitHub(
           linesAdded: c.totalAdditions,
           linesDeleted: c.totalDeletions,
           topFiles: c.filesChanged.slice(0, 3),
+          impactRating: rating,
           amount: Math.round((totalBudget * pct) / 100),
         };
       }),
       total: totalBudget,
       currency: "USDT",
     },
+    aiSummary: contributors
+      .map(
+        (c) =>
+          `${c.name} contributed ${c.commits.length} commits with ${(c.totalAdditions + c.totalDeletions).toLocaleString()} lines changed`
+      )
+      .join(". ") + ".",
   };
 }

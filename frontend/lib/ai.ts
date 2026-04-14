@@ -26,11 +26,35 @@ export interface VisualizationData {
   allCommits: CommitTimelineEntry[];
 }
 
+export interface ImpactScores {
+  complexity: number;
+  featureImpact: number;
+  scopeBreadth: number;
+  consistency: number;
+  volume: number;
+}
+
+export interface KeyEvidence {
+  sha: string;
+  message: string;
+  impact: "HIGH" | "MEDIUM" | "LOW";
+  additions: number;
+}
+
+export interface CodePatch {
+  file: string;
+  author: string;
+  code: string;
+}
+
 export interface AISplit {
   name: string;
   percentage: number;
   justification: string;
   keyContributions: string[];
+  impactRating: "HIGH" | "MEDIUM" | "LOW";
+  impactScores: ImpactScores;
+  keyEvidence: KeyEvidence[];
 }
 
 export interface AIInvoiceItem {
@@ -41,6 +65,7 @@ export interface AIInvoiceItem {
   linesDeleted: number;
   topFiles: string[];
   amount: number;
+  impactRating: "HIGH" | "MEDIUM" | "LOW";
 }
 
 export interface AIInvoice {
@@ -59,4 +84,6 @@ export interface AIAnalysisResult {
   splits: AISplit[];
   invoice: AIInvoice;
   visualizationData: VisualizationData;
+  aiSummary: string;
+  codeSnippets: CodePatch[];
 }
