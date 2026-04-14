@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import type { AISplit } from "@/lib/ai";
 
 const RANK_COLORS = ["#2DD4A8", "#F59E42", "#8B93A8", "rgba(45,212,168,0.5)", "#5A6275"];
@@ -30,8 +30,11 @@ export default function SplitStreamAnimation({
   const [showEndpoints, setShowEndpoints] = useState(false);
   const completeFired = useRef(false);
 
-  // Sort by percentage descending
-  const sorted = [...splits].sort((a, b) => b.percentage - a.percentage);
+  // Sort by percentage descending (memoized so effect deps stay stable)
+  const sorted = useMemo(
+    () => [...splits].sort((a, b) => b.percentage - a.percentage),
+    [splits]
+  );
   const svgHeight = Math.max(240, sorted.length * 80 + 60);
   const centerY = svgHeight / 2;
 
@@ -66,7 +69,7 @@ export default function SplitStreamAnimation({
       clearTimeout(endpointTimer);
       clearTimeout(completeTimer);
     };
-  }, [sorted.length, onComplete]);
+  }, [sorted, onComplete]);
 
   return (
     <div className="space-y-4 animate-fade-slide-in">
