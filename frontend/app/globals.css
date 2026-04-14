@@ -124,3 +124,69 @@ html, body {
 .animate-spinner {
   animation: spin 0.8s linear infinite;
 }
+
+/* Phase transition animations */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlideOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+.animate-fade-slide-in {
+  animation: fadeSlideIn 0.3s ease-out forwards;
+}
+
+.animate-fade-slide-out {
+  animation: fadeSlideOut 0.3s ease-out forwards;
+}
+
+/* Code scan line */
+@keyframes scanDown {
+  from { top: 0; }
+  to { top: 100%; }
+}
+
+.scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--accent-orange) 50%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Radar chart growth */
+@keyframes radarGrow {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-radar-grow {
+  animation: radarGrow 0.6s ease-out forwards;
+}
+
+/* Stream flow */
+.flow-stream {
+  stroke-dasharray: 12 8;
+  animation: flowDash 1.5s linear infinite;
+}
+
+/* Typewriter cursor blink */
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.typewriter-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--accent-orange);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: cursorBlink 0.8s step-end infinite;
+}
