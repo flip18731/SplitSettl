@@ -157,7 +157,9 @@ The invoice page features a cinematic 5-phase animated analysis:
 
 - Node.js 18+
 - MetaMask browser extension
-- HSK testnet tokens for gas (faucet: https://testnet.hsk.xyz)
+- HSK testnet tokens for gas — use the **official testnet faucet** (not the RPC URL `testnet.hsk.xyz`):
+  - [HashKey Chain Testnet Faucet](https://faucet.hsk.xyz/faucet) (per [docs](https://docs.hashkeychain.net/docs/Build-on-HashKey-Chain/Tools/Faucet))
+  - If that domain fails, try the migrated domain: [faucet.hashkeychain.net](https://faucet.hashkeychain.net/faucet)
 
 ### Install
 
