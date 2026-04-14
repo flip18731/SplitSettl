@@ -28,6 +28,11 @@ const config: HardhatUserConfig = {
       chainId: 133,
       accounts: [PRIVATE_KEY],
     },
+    hashkeyMainnet: {
+      url: "https://mainnet.hsk.xyz",
+      chainId: 177,
+      accounts: [PRIVATE_KEY],
+    },
     hardhat: {
       chainId: 31337,
     },
