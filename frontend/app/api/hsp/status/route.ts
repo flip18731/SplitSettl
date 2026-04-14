@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * HSP (HashKey Settlement Protocol) Status API
+ * Optional in-memory HSP status store (demo / legacy).
  *
- * Tracks the lifecycle of HSP payment flows:
- * Request -> Confirmation -> Receipt
- *
- * In production, this would query on-chain HSP events.
- * For the demo, we simulate the HSP status progression.
+ * **Production / hackathon demo:** Prefer reading HSP state from the deployed
+ * `SplitSettl` contract (`getHSPStatus`, events) or from the invoice
+ * settlement transaction. This route remains for local experiments only.
  */
 
 interface HSPRecord {

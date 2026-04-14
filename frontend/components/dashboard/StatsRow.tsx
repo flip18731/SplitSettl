@@ -1,39 +1,41 @@
 "use client";
 
-import { DEMO_STATS } from "@/lib/demo-data";
 import Card from "@/components/shared/Card";
-
-const stats = [
-  {
-    label: "Total Processed",
-    value: DEMO_STATS.totalPaymentsProcessed,
-    prefix: "$",
-    accent: "teal" as const,
-  },
-  {
-    label: "Active Projects",
-    value: DEMO_STATS.activeProjects,
-    prefix: "",
-    accent: "teal" as const,
-  },
-  {
-    label: "Contributors",
-    value: DEMO_STATS.totalContributors,
-    prefix: "",
-    accent: "teal" as const,
-  },
-  {
-    label: "AI Invoices",
-    value: DEMO_STATS.aiInvoicesGenerated,
-    prefix: "",
-    accent: "orange" as const,
-  },
-];
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 export default function StatsRow() {
+  const { stats, source } = useDashboardStats();
+
+  const rows = [
+    {
+      label: "Total Processed",
+      value: stats.totalPaymentsProcessed,
+      prefix: "$",
+      accent: "teal" as const,
+    },
+    {
+      label: "Active Projects",
+      value: stats.activeProjects,
+      prefix: "",
+      accent: "teal" as const,
+    },
+    {
+      label: "Contributors",
+      value: stats.totalContributors,
+      prefix: "",
+      accent: "teal" as const,
+    },
+    {
+      label: "AI Invoices (est.)",
+      value: stats.aiInvoicesGenerated,
+      prefix: "",
+      accent: "orange" as const,
+    },
+  ];
+
   return (
     <div className="grid grid-cols-4 gap-3">
-      {stats.map((stat) => (
+      {rows.map((stat) => (
         <Card key={stat.label} accent={stat.accent}>
           <div className="px-5 py-4">
             <p className="text-[11px] font-semibold uppercase tracking-[1.5px] text-text-tertiary mb-2">
@@ -47,6 +49,9 @@ export default function StatsRow() {
               )}
               {stat.value.toLocaleString()}
             </p>
+            {stat.label === "Total Processed" && source === "chain" && (
+              <p className="text-[9px] text-accent-teal mt-1 font-mono">on-chain</p>
+            )}
           </div>
         </Card>
       ))}

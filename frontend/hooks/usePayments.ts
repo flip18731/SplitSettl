@@ -1,10 +1,43 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { ALL_PAYMENTS, type Payment } from "@/lib/demo-data";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  ALL_PAYMENTS,
+  type Payment,
+} from "@/lib/demo-data";
+import { fetchPaymentsFromChain } from "@/lib/chain-payments";
 
 export function usePayments() {
-  const [payments] = useState<Payment[]>(ALL_PAYMENTS);
+  const [chainPayments, setChainPayments] = useState<Payment[]>([]);
+  const [source, setSource] = useState<"demo" | "chain">("demo");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { payments, hasDeployedContract } = await fetchPaymentsFromChain();
+        if (
+          !cancelled &&
+          hasDeployedContract &&
+          payments.length > 0
+        ) {
+          setChainPayments(payments);
+          setSource("chain");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const payments = useMemo(
+    () => (source === "chain" ? chainPayments : ALL_PAYMENTS),
+    [source, chainPayments]
+  );
 
   const getPaymentsByProject = useCallback(
     (projectId: number) => {
@@ -26,6 +59,8 @@ export function usePayments() {
 
   return {
     payments,
+    source,
+    loading,
     getPaymentsByProject,
     getRecentPayments,
     getTotalProcessed,

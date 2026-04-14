@@ -1,6 +1,6 @@
 "use client";
 
-import { ALL_PAYMENTS } from "@/lib/demo-data";
+import { usePayments } from "@/hooks/usePayments";
 import StatusBadge from "@/components/shared/StatusBadge";
 import HSPStepDots from "@/components/shared/HSPStepDots";
 import Card, { CardHeader } from "@/components/shared/Card";
@@ -23,7 +23,8 @@ function contributorNames(contribs: { name: string }[]): string {
 }
 
 export default function PaymentFeed() {
-  const payments = ALL_PAYMENTS.slice(0, 5);
+  const { payments: all, source, loading } = usePayments();
+  const payments = all.slice(0, 5);
 
   return (
     <Card accent="teal">
@@ -32,7 +33,9 @@ export default function PaymentFeed() {
           <span className="text-[13px] font-semibold text-text-primary">Payment feed</span>
           <div className="flex items-center gap-2">
             <span className="w-[6px] h-[6px] rounded-full bg-accent-teal pulse-glow" />
-            <span className="text-[11px] font-medium text-accent-teal">Live</span>
+            <span className="text-[11px] font-medium text-accent-teal">
+              {loading ? "…" : source === "chain" ? "Chain" : "Demo"}
+            </span>
           </div>
         </div>
       </CardHeader>

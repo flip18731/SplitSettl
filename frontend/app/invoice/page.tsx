@@ -4,8 +4,9 @@ import { useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import RepoInput from "@/components/invoice/RepoInput";
 import AnalysisJourney from "@/components/invoice/AnalysisJourney";
-import PaymentFlowSteps from "@/components/invoice/PaymentFlowSteps";
+import OnChainSettlement from "@/components/invoice/OnChainSettlement";
 import type { AIAnalysisResult } from "@/lib/ai";
+import { explorerTxUrl } from "@/lib/explorer";
 import { SAMPLE_RESULT } from "@/lib/sampleData";
 
 type Stage = "input" | "analyzing" | "paying" | "complete";
@@ -17,6 +18,7 @@ export default function InvoicePage() {
   const [repoSlug, setRepoSlug] = useState("");
   const [branch, setBranch] = useState("main");
   const [error, setError] = useState<string | null>(null);
+  const [settlementTx, setSettlementTx] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const handleAnalyze = async (
@@ -76,12 +78,16 @@ export default function InvoicePage() {
   };
 
   const handleApprove = useCallback(() => setStage("paying"), []);
-  const handlePaymentComplete = useCallback(() => setStage("complete"), []);
+  const handlePaymentComplete = useCallback((txHash?: string) => {
+    if (txHash) setSettlementTx(txHash);
+    setStage("complete");
+  }, []);
 
   const handleReset = () => {
     setStage("input");
     setResult(null);
     setError(null);
+    setSettlementTx(null);
   };
 
   return (
@@ -114,39 +120,18 @@ export default function InvoicePage() {
 
       {/* Payment flow stage */}
       {stage === "paying" && result && (
-        <div className="bg-bg-surface border border-border rounded-lg p-6 animate-fade-in">
-          <p className="text-[13px] font-semibold text-text-primary mb-1">
-            Processing via HSP
-          </p>
-          <p className="text-[11px] text-text-tertiary mb-4">
-            ${result.invoice.total.toLocaleString()} {result.invoice.currency}{" "}
-            to {result.splits.length} contributors
-          </p>
-
-          <PaymentFlowSteps
-            steps={[
-              {
-                label: "Creating HSP payment request...",
-                description: `Registering $${result.invoice.total.toLocaleString()} on HSP protocol`,
-              },
-              {
-                label: "Processing payment split...",
-                description: result.splits
-                  .map(
-                    (s) =>
-                      `$${((result.invoice.total * s.percentage) / 100).toFixed(0)} to ${s.name}`
-                  )
-                  .join(", "),
-              },
-              {
-                label: "Confirming on HashKey Chain...",
-                description: "Waiting for on-chain confirmation",
-              },
-              {
-                label: "Generating HSP receipt...",
-                description: "HSP flow complete — receipt stored on-chain",
-              },
-            ]}
+        <div className="bg-bg-surface border border-border rounded-lg p-6 animate-fade-in space-y-4">
+          <div>
+            <p className="text-[13px] font-semibold text-text-primary mb-1">
+              Settle with HSP + ERC20
+            </p>
+            <p className="text-[11px] text-text-tertiary">
+              ${result.invoice.total.toLocaleString()} {result.invoice.currency}{" "}
+              to {result.splits.length} contributors
+            </p>
+          </div>
+          <OnChainSettlement
+            result={result}
             onComplete={handlePaymentComplete}
           />
         </div>
@@ -196,9 +181,21 @@ export default function InvoicePage() {
             ))}
           </div>
 
-          <div className="flex items-center justify-center gap-2 text-[11px] text-text-tertiary mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent-teal" />
-            HSP receipt issued — settlement recorded on HashKey Chain
+          <div className="flex flex-col items-center gap-2 text-[11px] text-text-tertiary mb-6">
+            <div className="flex items-center justify-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent-teal" />
+              HSP receipt issued — settlement recorded on HashKey Chain
+            </div>
+            {settlementTx && (
+              <a
+                href={explorerTxUrl(settlementTx)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent-teal font-mono text-[11px] hover:underline"
+              >
+                View transaction
+              </a>
+            )}
           </div>
 
           <div className="flex items-center justify-center gap-3">

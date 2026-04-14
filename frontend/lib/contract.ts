@@ -27,7 +27,7 @@ export const HASHKEY_MAINNET = {
 };
 
 // Official HashKey Chain mainnet stablecoin addresses
-export const USDT_MAINNET = "0xf1b50ed67a9e2cc94ad3c477779e2d4cbfff9029";
+export const USDT_MAINNET = "0xF1B50eD67A9e2CC94Ad3c477779E2d4cBfFf9029";
 export const USDC_MAINNET = "0x054ed45810DbBAb8B27668922D110669c9D88D0a";
 
 // Testnet MockUSDT (deployed via scripts/deploy.ts)

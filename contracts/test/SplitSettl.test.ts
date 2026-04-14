@@ -123,4 +123,51 @@ describe("SplitSettl", function () {
       ).to.be.revertedWith("Not in Requested state");
     });
   });
+
+  describe("ERC20 (MockUSDT) + HSP on payment record", function () {
+    let token: Awaited<ReturnType<typeof deployMockUsdt>>;
+
+    async function deployMockUsdt() {
+      const Mock = await ethers.getContractFactory("MockUSDT");
+      const t = await Mock.deploy();
+      await t.waitForDeployment();
+      return t;
+    }
+
+    beforeEach(async function () {
+      token = await deployMockUsdt();
+      await contract.createProject(
+        "ERC20 Project",
+        [alice.address, bob.address],
+        [5000, 5000]
+      );
+    });
+
+    it("should split MockUSDT via submitPaymentERC20 and store HSP id on Payment", async function () {
+      const amount = 1_000_000n; // 1 USDT (6 decimals)
+      const hspId = "HSP-ERC20-001";
+
+      await token.mint(alice.address, amount);
+      await token.connect(alice).approve(await contract.getAddress(), amount);
+
+      await expect(
+        contract
+          .connect(alice)
+          .submitPaymentERC20(0, await token.getAddress(), amount, "INV-ERC20-1", hspId)
+      )
+        .to.emit(contract, "HSPRequestCreated")
+        .and.to.emit(contract, "PaymentSplit");
+
+      const hist = await contract.getProjectPaymentHistory(0);
+      expect(hist.length).to.equal(1);
+      expect(hist[0].invoiceRef).to.equal("INV-ERC20-1");
+      expect(hist[0].hspRequestId).to.equal(hspId);
+      expect(hist[0].token).to.equal(await token.getAddress());
+
+      const balBob = await token.balanceOf(bob.address);
+      const balAlice = await token.balanceOf(alice.address);
+      expect(balBob).to.equal(500_000n);
+      expect(balAlice).to.equal(500_000n);
+    });
+  });
 });

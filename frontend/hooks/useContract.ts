@@ -87,6 +87,57 @@ export function useContract() {
     [getContract]
   );
 
+  const createProject = useCallback(
+    async (
+      name: string,
+      contributors: string[],
+      splitBps: number[]
+    ) => {
+      setLoading(true);
+      try {
+        const contract = await getContract(true);
+        if (!contract) throw new Error("No wallet connected");
+
+        const bps = splitBps.map((b) => BigInt(b));
+        const tx = await contract.createProject(name, contributors, bps);
+        const receipt = await tx.wait();
+        return receipt;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [getContract]
+  );
+
+  const submitPaymentERC20 = useCallback(
+    async (
+      projectId: number,
+      tokenAddress: string,
+      amountRaw: bigint,
+      invoiceRef: string,
+      hspRequestId: string
+    ) => {
+      setLoading(true);
+      try {
+        const contract = await getContract(true);
+        if (!contract) throw new Error("No wallet connected");
+
+        const tx = await contract.submitPaymentERC20(
+          projectId,
+          tokenAddress,
+          amountRaw,
+          invoiceRef,
+          hspRequestId
+        );
+        const receipt = await tx.wait();
+        return receipt;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [getContract]
+  );
+
   return {
     loading,
     getContract,
@@ -94,5 +145,7 @@ export function useContract() {
     emitHSPRequest,
     confirmHSPPayment,
     generateHSPReceipt,
+    createProject,
+    submitPaymentERC20,
   };
 }

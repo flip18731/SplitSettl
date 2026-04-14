@@ -20,12 +20,12 @@ SplitSettl uses Claude AI to analyze real GitHub commit data, measure each contr
 
 ```
 Frontend (Next.js)
-├── Dashboard      Stats, live payment feed, flow canvas, AI agent status
+├── Dashboard      Stats (on-chain when deployed), payment feed, flow canvas, AI agent status
 ├── Projects       Project list + detail with team splits and payment history
-├── Invoices       AI invoice generator — 5-phase cinematic analysis journey
+├── Invoices       AI invoice generator + wallet settlement (`createProject` + `submitPaymentERC20`)
 └── API Routes
     ├── /api/ai/analyze     Claude API for real GitHub contribution analysis
-    └── /api/hsp/status     HSP status tracking
+    └── /api/hsp/status     Optional demo store (canonical state: contract + explorer)
 
 Smart Contracts (HashKey Chain)
 ├── SplitSettl.sol    Project registry, atomic payment splitting, full HSP lifecycle
@@ -41,7 +41,7 @@ Smart Contracts (HashKey Chain)
 |----------|---------|---------|
 | SplitSettl | HashKey Testnet (133) | _Deploy with `npm run deploy:testnet`_ |
 | MockUSDT | HashKey Testnet (133) | _Deploy with `npm run deploy:testnet`_ |
-| SplitSettl | HashKey Mainnet (177) | _Deploy with `npm run deploy:mainnet`_ |
+| SplitSettl | HashKey Mainnet (177) | `cd contracts && npm run deploy:mainnet` |
 
 > Set `NEXT_PUBLIC_CONTRACT_ADDRESS` and `NEXT_PUBLIC_MOCK_USDT_ADDRESS` in `.env.local` after deployment.
 
@@ -49,7 +49,9 @@ Smart Contracts (HashKey Chain)
 
 ## How HSP is Used
 
-HSP (HashKey Settlement Protocol) is deeply integrated into every ERC20 payment flow. All three lifecycle stages happen **atomically in a single transaction**:
+**Official reference:** The PayFi track expects use of **HSP** as documented by HashKey — see the **HSP user manual** from the top navigation on [hashfans.io](https://hashfans.io/). That document describes the settlement *message* model (request / confirmation / receipt) that SplitSettl mirrors on-chain.
+
+SplitSettl implements an **HSP-shaped lifecycle** in `SplitSettl.sol` for every **ERC20** payment (`submitPaymentERC20`): all three lifecycle stages are recorded **atomically in one transaction**:
 
 ### 3-Stage HSP Lifecycle
 
@@ -68,7 +70,7 @@ HSP (HashKey Settlement Protocol) is deeply integrated into every ERC20 payment 
                               HSPReceiptGenerated event emitted with txRef hash
 ```
 
-All HSP message IDs are stored per-project (`projectHSPMessageIds` mapping) for a permanent on-chain audit trail. The frontend visualizes this as a step-by-step progress timeline in `PaymentFlowSteps`.
+All HSP message IDs are stored per-project (`projectHSPMessageIds` mapping) for a permanent on-chain audit trail. The **AI Invoice** page walks through **real wallet settlement**: create project → (testnet) mint MockUSDT → approve → `submitPaymentERC20`, with an explorer link on success. The dashboard **payment feed** switches to **on-chain history** when `NEXT_PUBLIC_CONTRACT_ADDRESS` is configured and payments exist.
 
 ---
 
@@ -241,8 +243,10 @@ Return to Dashboard. Show the new payment in the live feed. "The full HSP lifecy
 ## Hackathon Submission
 
 **Event:** HashKey Chain On-Chain Horizon Hackathon  
-**Track:** PayFi  
-**Prize Pool:** $10,000  
+**Track:** PayFi (AI-assisted analysis)  
+**Prize pool (overall event):** 40,000 USDT — see official rules for per-track placement ([hashfans.io](https://hashfans.io/)).  
+
+Use **`SUBMISSION.md`** for demo video link, deployed addresses, and a short pre-flight checklist.
 
 ### Compliance Checklist
 
@@ -257,9 +261,11 @@ Return to Dashboard. Show the new payment in the live feed. "The full HSP lifecy
 - [x] 5-phase cinematic analysis journey
 - [x] MetaMask wallet integration with chain switching
 - [x] Mainnet + testnet support via env var
+- [x] Invoice page: on-chain ERC20 settlement (`createProject` + `submitPaymentERC20`) with explorer link
+- [x] Dashboard: payment feed + stats use chain data when a deployed contract has activity
 
 ---
 
 ## License
 
-MIT
+MIT — see [`LICENSE`](./LICENSE).

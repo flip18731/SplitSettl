@@ -5,7 +5,7 @@ import "./interfaces/IERC20.sol";
 
 contract SplitSettl {
     // Official HashKey Chain mainnet stablecoin addresses
-    address public constant USDT_MAINNET = 0xf1b50ed67a9e2cc94ad3c477779e2d4cbfff9029;
+    address public constant USDT_MAINNET = 0xF1B50eD67A9e2CC94Ad3c477779E2d4cBfFf9029;
     address public constant USDC_MAINNET = 0x054ed45810DbBAb8B27668922D110669c9D88D0a;
 
     struct Contributor {
@@ -162,7 +162,7 @@ contract SplitSettl {
         string calldata invoiceRef
     ) external payable projectExists(projectId) {
         require(msg.value > 0, "Must send HSK");
-        _splitAndPay(projectId, msg.value, invoiceRef, address(0));
+        _splitAndPay(projectId, msg.value, invoiceRef, address(0), "");
     }
 
     function submitPaymentERC20(
@@ -189,7 +189,7 @@ contract SplitSettl {
 
         // Stage 2: Transfer ERC20 and split to contributors
         IERC20(token).transferFrom(msg.sender, address(this), amount);
-        _splitAndPay(projectId, amount, invoiceRef, token);
+        _splitAndPay(projectId, amount, invoiceRef, token, hspRequestId);
 
         // Stage 2b: HSP Confirmation — funds distributed
         hspMessages[hspRequestId].status = HSPStatus.Confirmed;
@@ -210,7 +210,8 @@ contract SplitSettl {
         uint256 projectId,
         uint256 totalAmount,
         string calldata invoiceRef,
-        address token
+        address token,
+        string memory recordedHspRequestId
     ) internal {
         Project storage proj = projects[projectId];
         uint256 remaining = totalAmount;
@@ -247,7 +248,7 @@ contract SplitSettl {
             invoiceRef: invoiceRef,
             token: token,
             timestamp: block.timestamp,
-            hspRequestId: ""
+            hspRequestId: recordedHspRequestId
         }));
 
         emit PaymentSplit(projectId, totalAmount, invoiceRef);

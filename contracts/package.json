@@ -6,6 +6,7 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "deploy:testnet": "hardhat run scripts/deploy.ts --network hashkeyTestnet",
+    "deploy:mainnet": "hardhat run scripts/deploy.ts --network hashkeyMainnet",
     "deploy:local": "hardhat run scripts/deploy.ts --network hardhat",
     "seed": "hardhat run scripts/seed.ts --network hashkeyTestnet"
   },

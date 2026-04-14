@@ -1,9 +1,21 @@
 /**
- * HSP (HashKey Settlement Protocol) Integration
+ * HSP (HashKey Settlement Protocol) — types & lightweight helpers
  *
- * HSP is a messaging layer for payment requests, confirmations, receipts,
- * and status synchronization. HSP does NOT manage funds — it handles
- * payment interaction messages only.
+ * **Official product context:** HashKey documents the HSP user flow in the
+ * resources hub (see [hashfans.io](https://hashfans.io/) → HSP user manual in
+ * the top navigation). Use that manual for PayFi-track judging: it describes
+ * how payment *messages* (request / confirmation / receipt) relate to
+ * settlement workflows.
+ *
+ * **This codebase:** The **canonical** HSP-aligned lifecycle for SplitSettl is
+ * implemented **on-chain** in `SplitSettl.sol` (`HSPRequestCreated` → transfer +
+ * `HSPConfirmed` → `HSPReceiptGenerated`) and surfaced in the UI via invoice
+ * settlement (`submitPaymentERC20`) and the dashboard when
+ * `NEXT_PUBLIC_CONTRACT_ADDRESS` is set.
+ *
+ * The async helpers below are **UX placeholders** (simulated delays) for
+ * prototyping flows that do not yet call an external HSP HTTP API. They are
+ * not a substitute for the on-chain events above.
  *
  * Flow: Request → Confirmation → Receipt
  */
