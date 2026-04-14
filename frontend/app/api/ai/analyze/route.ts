@@ -35,17 +35,24 @@ interface ContributorSummary {
   dailyActivity: Record<string, number>;
 }
 
-/** First valid 0x…40 hex address found in commit messages (per contributor). */
-function findWalletInCommitMessages(messages: string[]): string | undefined {
+/** First valid 0x…40 hex address found in this contributor's commits (chronological fetch order). */
+function findWalletFromContributorCommits(
+  commits: CommitData[]
+): { address: string; fullMessage: string; sha: string } | undefined {
   const re = /\b0x[a-fA-F0-9]{40}\b/g;
-  for (const text of messages) {
+  for (const cm of commits) {
+    const text = cm.fullMessage;
     re.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null) {
       const raw = m[0];
       if (isAddress(raw)) {
         try {
-          return getAddress(raw);
+          return {
+            address: getAddress(raw),
+            fullMessage: text,
+            sha: cm.sha,
+          };
         } catch {
           /* invalid checksum edge */
         }
@@ -494,12 +501,14 @@ Return this exact JSON structure:
         }
         // 2) Ethereum address embedded in this contributor's commit messages
         if (!split.walletAddress && contributor) {
-          const fromMsg = findWalletInCommitMessages(
-            contributor.commits.map((cm) => cm.fullMessage)
-          );
-          if (fromMsg) {
-            split.walletAddress = fromMsg;
+          const fromCommit = findWalletFromContributorCommits(contributor.commits);
+          if (fromCommit) {
+            split.walletAddress = fromCommit.address;
             split.walletAddressSource = "commit-message";
+            split.walletAddressCommitEvidence = {
+              sha: fromCommit.sha,
+              fullMessage: fromCommit.fullMessage,
+            };
           }
         }
       }

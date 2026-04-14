@@ -1,12 +1,10 @@
 "use client";
 
-import {
-  type AIAnalysisResult,
-  walletAddressSourceDescription,
-} from "@/lib/ai";
+import type { AIAnalysisResult } from "@/lib/ai";
 import ImpactBadge from "./shared/ImpactBadge";
 import MiniRadar from "./shared/MiniRadar";
 import EvidenceLink from "./shared/EvidenceLink";
+import WalletAddressProvenance from "./shared/WalletAddressProvenance";
 import { shortenAddress } from "@/lib/wallet";
 
 const RANK_COLORS = ["#2DD4A8", "#F59E42", "#8B93A8", "rgba(45,212,168,0.5)", "#5A6275"];
@@ -104,10 +102,6 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
               {invoice.items.map((item, i) => {
                 const split = splits.find((s) => s.name === item.contributor);
                 const color = colorMap[item.contributor] || "#5A6275";
-                const walletSrcHint = split
-                  ? walletAddressSourceDescription(split.walletAddressSource)
-                  : null;
-
                 return (
                   <tr
                     key={i}
@@ -140,11 +134,11 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
                                 />
                                 {shortenAddress(split.walletAddress)}
                               </p>
-                              {walletSrcHint && (
-                                <p className="text-[9px] text-text-tertiary/90 mt-0.5 leading-snug pl-2.5">
-                                  {walletSrcHint}
-                                </p>
-                              )}
+                              <WalletAddressProvenance
+                                split={split}
+                                repoSlug={result.repository}
+                                compact
+                              />
                             </div>
                           )}
                           <div className="mt-1">
@@ -244,9 +238,6 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
           <div className="space-y-3">
             {splits.map((split, i) => {
               const color = colorMap[split.name] || "#5A6275";
-              const walletSrcHint = walletAddressSourceDescription(
-                split.walletAddressSource
-              );
               return (
                 <div key={i}>
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -266,10 +257,13 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
                       </span>
                     )}
                   </div>
-                  {split.walletAddress && walletSrcHint && (
-                    <p className="text-[9px] text-text-tertiary/90 mb-1 leading-snug">
-                      {walletSrcHint}
-                    </p>
+                  {split.walletAddress && (
+                    <div className="mb-2">
+                      <WalletAddressProvenance
+                        split={split}
+                        repoSlug={result.repository}
+                      />
+                    </div>
                   )}
                   <p className="text-[12px] text-text-secondary italic leading-relaxed">
                     {split.justification}

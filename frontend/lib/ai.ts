@@ -50,6 +50,14 @@ export interface CodePatch {
 /** Where SplitSettl took the payout address from (set by /api/ai/analyze). */
 export type WalletAddressSource = "splitsettle" | "commit-message";
 
+/** Commit body where an embedded 0x address was found (commit-message source). */
+export interface WalletAddressCommitEvidence {
+  /** Short SHA from analysis (matches GitHub short ref) */
+  sha: string;
+  /** Full commit message text as on GitHub (incl. body) */
+  fullMessage: string;
+}
+
 export interface AISplit {
   name: string;
   percentage: number;
@@ -61,9 +69,11 @@ export interface AISplit {
   walletAddress?: string;
   /** Set when wallet was resolved during analysis */
   walletAddressSource?: WalletAddressSource;
+  /** Exact commit message when source is commit-message */
+  walletAddressCommitEvidence?: WalletAddressCommitEvidence;
 }
 
-/** Short German label for UI tooltips / hints */
+/** Short German label when we do not show structured evidence (e.g. .splitsettle.json). */
 export function walletAddressSourceDescription(
   source?: WalletAddressSource
 ): string | null {
@@ -71,7 +81,7 @@ export function walletAddressSourceDescription(
     case "splitsettle":
       return "Aus `.splitsettle.json` im Repository";
     case "commit-message":
-      return "Aus einer Commit-Message in der GitHub-Historie";
+      return null;
     default:
       return null;
   }

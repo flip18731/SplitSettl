@@ -2,10 +2,7 @@
 
 import { useState } from "react";
 import { ethers } from "ethers";
-import {
-  type AIAnalysisResult,
-  walletAddressSourceDescription,
-} from "@/lib/ai";
+import type { AIAnalysisResult } from "@/lib/ai";
 import { useContract } from "@/hooks/useContract";
 import {
   CONTRACT_ADDRESS,
@@ -16,6 +13,7 @@ import { ERC20_ABI } from "@/lib/erc20";
 import { splitsToBasisPoints } from "@/lib/splits";
 import { connectWallet, switchToHashKeyChain } from "@/lib/wallet";
 import { explorerTxUrl } from "@/lib/explorer";
+import WalletAddressProvenance from "./shared/WalletAddressProvenance";
 
 const ZERO = ethers.ZeroAddress;
 
@@ -175,40 +173,35 @@ export default function OnChainSettlement({ result, onComplete }: Props) {
       </p>
 
       <div className="space-y-2">
-        {result.splits.map((s) => {
-          const addrHint = walletAddressSourceDescription(
-            s.walletAddressSource
-          );
-          return (
-            <div
-              key={s.name}
-              className="flex flex-col sm:flex-row sm:items-start gap-2 text-[12px]"
-            >
-              <span className="text-text-secondary w-32 shrink-0 sm:pt-2">
-                {s.name}{" "}
-                <span className="text-text-tertiary">({s.percentage}%)</span>
-              </span>
-              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                <input
-                  className="w-full bg-bg-elevated border border-border rounded px-3 py-2 font-mono text-[11px] text-text-primary placeholder:text-text-tertiary"
-                  placeholder="0x contributor wallet"
-                  value={addressByName[s.name] ?? ""}
-                  onChange={(e) =>
-                    setAddressByName((prev) => ({
-                      ...prev,
-                      [s.name]: e.target.value,
-                    }))
-                  }
-                />
-                {addrHint && (
-                  <p className="text-[9px] text-text-tertiary leading-snug px-0.5">
-                    {addrHint}
-                  </p>
-                )}
-              </div>
+        {result.splits.map((s) => (
+          <div
+            key={s.name}
+            className="flex flex-col sm:flex-row sm:items-start gap-2 text-[12px]"
+          >
+            <span className="text-text-secondary w-32 shrink-0 sm:pt-2">
+              {s.name}{" "}
+              <span className="text-text-tertiary">({s.percentage}%)</span>
+            </span>
+            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+              <input
+                className="w-full bg-bg-elevated border border-border rounded px-3 py-2 font-mono text-[11px] text-text-primary placeholder:text-text-tertiary"
+                placeholder="0x contributor wallet"
+                value={addressByName[s.name] ?? ""}
+                onChange={(e) =>
+                  setAddressByName((prev) => ({
+                    ...prev,
+                    [s.name]: e.target.value,
+                  }))
+                }
+              />
+              <WalletAddressProvenance
+                split={s}
+                repoSlug={result.repository}
+                compact
+              />
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
 
       {error && (
