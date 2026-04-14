@@ -7,14 +7,13 @@ import AnalysisJourney from "@/components/invoice/AnalysisJourney";
 import OnChainSettlement from "@/components/invoice/OnChainSettlement";
 import type { AIAnalysisResult } from "@/lib/ai";
 import { explorerTxUrl } from "@/lib/explorer";
-import { SAMPLE_RESULT } from "@/lib/sampleData";
+import { formatNumberEnUS } from "@/lib/format";
 
 type Stage = "input" | "analyzing" | "paying" | "complete";
 
 export default function InvoicePage() {
   const [stage, setStage] = useState<Stage>("input");
   const [result, setResult] = useState<AIAnalysisResult | null>(null);
-  const [cachedResult] = useState<AIAnalysisResult>(SAMPLE_RESULT);
   const [repoSlug, setRepoSlug] = useState("");
   const [branch, setBranch] = useState("main");
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +37,7 @@ export default function InvoicePage() {
     abortRef.current = new AbortController();
     const timeout = setTimeout(() => {
       abortRef.current?.abort();
-    }, 15000);
+    }, 120000);
 
     try {
       const response = await fetch("/api/ai/analyze", {
@@ -69,11 +68,13 @@ export default function InvoicePage() {
         message === "The user aborted a request." ||
         message.includes("abort")
       ) {
-        setError("Request timed out — using cached analysis");
+        setError(
+          "Request was cancelled or timed out (2 min). Try again, or use a smaller branch."
+        );
       } else {
-        setError(`${message} — using cached analysis`);
+        setError(message);
       }
-      setResult(cachedResult);
+      setResult(null);
     }
   };
 
@@ -126,7 +127,7 @@ export default function InvoicePage() {
               Settle with HSP + ERC20
             </p>
             <p className="text-[11px] text-text-tertiary">
-              ${result.invoice.total.toLocaleString()} {result.invoice.currency}{" "}
+              ${formatNumberEnUS(result.invoice.total)} {result.invoice.currency}{" "}
               to {result.splits.length} contributors
             </p>
           </div>
@@ -156,7 +157,7 @@ export default function InvoicePage() {
             Settlement Complete
           </h2>
           <p className="text-[13px] text-text-tertiary mb-6">
-            ${result.invoice.total.toLocaleString()} {result.invoice.currency}{" "}
+            ${formatNumberEnUS(result.invoice.total)} {result.invoice.currency}{" "}
             split to {result.splits.length} contributors
           </p>
 

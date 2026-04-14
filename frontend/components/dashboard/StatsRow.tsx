@@ -2,6 +2,7 @@
 
 import Card from "@/components/shared/Card";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { formatNumberEnUS } from "@/lib/format";
 
 export default function StatsRow() {
   const { stats, source } = useDashboardStats();
@@ -47,7 +48,7 @@ export default function StatsRow() {
                   {stat.prefix}
                 </span>
               )}
-              {stat.value.toLocaleString()}
+              {formatNumberEnUS(stat.value)}
             </p>
             {stat.label === "Total Processed" && source === "chain" && (
               <p className="text-[9px] text-accent-teal mt-1 font-mono">on-chain</p>

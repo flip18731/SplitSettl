@@ -1,6 +1,7 @@
 "use client";
 
 import { usePayments } from "@/hooks/usePayments";
+import { formatNumberEnUS } from "@/lib/format";
 import StatusBadge from "@/components/shared/StatusBadge";
 import HSPStepDots from "@/components/shared/HSPStepDots";
 import Card, { CardHeader } from "@/components/shared/Card";
@@ -64,7 +65,7 @@ export default function PaymentFeed() {
             {/* Right: amount + meta */}
             <div className="text-right flex-shrink-0">
               <p className="text-[14px] font-semibold text-accent-teal">
-                ${payment.amount.toLocaleString()}
+                ${formatNumberEnUS(payment.amount)}
               </p>
               <div className="flex items-center gap-2 justify-end mt-0.5">
                 <span className="text-[10px] text-text-tertiary">{formatTime(payment.timestamp)}</span>

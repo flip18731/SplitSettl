@@ -1,6 +1,7 @@
 "use client";
 
 import type { AIAnalysisResult } from "@/lib/ai";
+import { formatNumberEnUS } from "@/lib/format";
 
 export default function InvoicePreview({ result }: { result: AIAnalysisResult }) {
   const { invoice, splits } = result;
@@ -37,7 +38,7 @@ export default function InvoicePreview({ result }: { result: AIAnalysisResult })
           <div>
             <p className="text-[28px] font-bold text-text-primary leading-none mb-1">
               <span className="text-accent-teal">$</span>
-              {invoice.total.toLocaleString()}
+              {formatNumberEnUS(invoice.total)}
               <span className="text-[14px] font-normal text-text-tertiary ml-2">
                 {invoice.currency}
               </span>
@@ -77,7 +78,7 @@ export default function InvoicePreview({ result }: { result: AIAnalysisResult })
                     {item.contributor}
                   </p>
                   <p className="text-[11px] text-text-secondary mt-0.5">
-                    {item.commits} commits · +{item.linesAdded.toLocaleString()} / -{item.linesDeleted.toLocaleString()}
+                    {item.commits} commits · +{formatNumberEnUS(item.linesAdded)} / -{formatNumberEnUS(item.linesDeleted)}
                   </p>
                 </td>
                 <td className="py-3 pr-4">
@@ -100,7 +101,7 @@ export default function InvoicePreview({ result }: { result: AIAnalysisResult })
                 </td>
                 <td className="py-3 pr-4 text-right">
                   <span className="text-[12px] text-text-secondary">
-                    {(item.linesAdded + item.linesDeleted).toLocaleString()}
+                    {formatNumberEnUS(item.linesAdded + item.linesDeleted)}
                   </span>
                 </td>
                 <td className="py-3 text-right">
@@ -117,7 +118,7 @@ export default function InvoicePreview({ result }: { result: AIAnalysisResult })
         <div className="flex items-center justify-between pt-3 mt-1 border-t-2 border-accent-teal">
           <span className="text-[13px] font-semibold text-text-primary">Total</span>
           <span className="text-[20px] font-bold text-accent-teal">
-            ${invoice.total.toLocaleString()} {invoice.currency}
+            ${formatNumberEnUS(invoice.total)} {invoice.currency}
           </span>
         </div>
       </div>

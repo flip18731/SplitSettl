@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import type { AISplit } from "@/lib/ai";
+import { formatNumberEnUS } from "@/lib/format";
 
 const RANK_COLORS = ["#2DD4A8", "#F59E42", "#8B93A8", "rgba(45,212,168,0.5)", "#5A6275"];
 
@@ -148,7 +149,7 @@ export default function SplitStreamAnimation({
                       fontWeight="700"
                       fontFamily="Plus Jakarta Sans, sans-serif"
                     >
-                      ${amount.toLocaleString()}
+                      ${formatNumberEnUS(amount)}
                     </text>
                     <text
                       x="790"
@@ -190,7 +191,7 @@ export default function SplitStreamAnimation({
                 fontWeight="700"
                 fontFamily="Plus Jakarta Sans, sans-serif"
               >
-                ${total.toLocaleString()}
+                ${formatNumberEnUS(total)}
               </text>
               <text
                 x="450"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { formatNumberEnUS } from "@/lib/format";
 
 interface LoadingStep {
   pending: string;
@@ -43,7 +44,7 @@ export default function AnalysisLoadingSteps({
     {
       pending: "Analyzing code diffs and complexity...",
       done: fetchResult
-        ? `Analyzed ${(fetchResult.totalLines ?? 0).toLocaleString()} lines across ${fetchResult.totalFiles ?? "?"} files`
+        ? `Analyzed ${formatNumberEnUS(fetchResult.totalLines ?? 0)} lines across ${fetchResult.totalFiles ?? "?"} files`
         : "Analyzing...",
     },
     {

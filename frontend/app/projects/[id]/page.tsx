@@ -7,6 +7,7 @@ import Card, { CardHeader, CardBody } from "@/components/shared/Card";
 import SplitBar from "@/components/shared/SplitBar";
 import HSPProgressBar from "@/components/shared/HSPProgressBar";
 import StatusBadge from "@/components/shared/StatusBadge";
+import { formatNumberEnUS } from "@/lib/format";
 
 const SPLIT_COLORS = ["#2DD4A8", "#F59E42", "rgba(45,212,168,0.5)", "#5A6275"];
 
@@ -51,7 +52,7 @@ export default function ProjectDetailPage() {
         </div>
         <div className="text-right">
           <p className="text-[28px] font-light text-text-primary">
-            <span className="text-accent-teal">$</span>{project.totalPaid.toLocaleString()}
+            <span className="text-accent-teal">$</span>{formatNumberEnUS(project.totalPaid)}
           </p>
           <p className="text-[11px] text-text-tertiary">Total paid</p>
         </div>
@@ -83,7 +84,7 @@ export default function ProjectDetailPage() {
                     <span className="text-[11px] text-text-tertiary">{formatDate(payment.timestamp)}</span>
                   </div>
                   <span className="text-[17px] font-semibold text-accent-teal">
-                    ${payment.amount.toLocaleString()}
+                    ${formatNumberEnUS(payment.amount)}
                   </span>
                 </div>
 
@@ -155,7 +156,7 @@ export default function ProjectDetailPage() {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="text-[13px] font-semibold text-accent-teal">
-                        ${c.totalEarned.toLocaleString()}
+                        ${formatNumberEnUS(c.totalEarned)}
                       </p>
                       <p className="text-[10px] text-text-tertiary">{c.splitBps / 100}%</p>
                     </div>

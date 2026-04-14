@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DEMO_PROJECTS } from "@/lib/demo-data";
 import Card, { CardBody } from "@/components/shared/Card";
 import SplitBar from "@/components/shared/SplitBar";
+import { formatNumberEnUS } from "@/lib/format";
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -45,7 +46,7 @@ export default function ProjectsPage() {
                 <div className="flex items-center justify-between pt-3 border-t border-border">
                   <span className="text-[22px] font-light text-text-primary">
                     <span className="text-accent-teal">$</span>
-                    {project.totalPaid.toLocaleString()}
+                    {formatNumberEnUS(project.totalPaid)}
                   </span>
                   <span className="text-[12px] text-text-tertiary">
                     {project.payments.length} payments

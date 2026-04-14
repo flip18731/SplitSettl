@@ -5,12 +5,9 @@ import Card, { CardHeader, CardBody } from "@/components/shared/Card";
 import HSPProgressBar from "@/components/shared/HSPProgressBar";
 
 const logEntries = [
-  "Analyzed 47 commits for HashKey DeFi SDK",
-  "Generated INV-0028 — $1,200 split to 3 contributors",
-  "HSP receipt issued for HSP-028",
-  "Monitoring NFT Marketplace activity",
-  "Verified split ratios for SC Audit Tool",
-  "Generated INV-0027 — $1,350 split to 4 contributors",
+  "Open the Invoice page and run Analyze Repository on your GitHub repo.",
+  "Splits and wallet hints come from your repo, commits, and optional .splitsettle.json.",
+  "On-chain settlement uses your connected wallet on HashKey Chain.",
 ];
 
 export default function AIAgentCard() {

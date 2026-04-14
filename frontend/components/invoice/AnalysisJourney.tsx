@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import type { AIAnalysisResult } from "@/lib/ai";
 import FetchSteps from "./FetchSteps";
 import CodeScanAnimation from "./CodeScanAnimation";
@@ -30,15 +30,41 @@ export default function AnalysisJourney({
   const [phase, setPhase] = useState<Phase>("fetching");
   const scanStartRef = useRef(0);
 
-  // Phase 1 → 2: auto-advance after 2s
+  const scanExtras = useMemo(() => {
+    if (!result) {
+      return {
+        totalLineChanges: 0,
+        contributorImpactTiers: { high: 0, medium: 0, low: 0 },
+      };
+    }
+    const totalLineChanges = result.invoice.items.reduce(
+      (acc, item) => acc + item.linesAdded + item.linesDeleted,
+      0
+    );
+    let high = 0;
+    let medium = 0;
+    let low = 0;
+    for (const s of result.splits) {
+      if (s.impactRating === "HIGH") high++;
+      else if (s.impactRating === "MEDIUM") medium++;
+      else low++;
+    }
+    return {
+      totalLineChanges,
+      contributorImpactTiers: { high, medium, low },
+    };
+  }, [result]);
+
+  // Phase 1 → 2: only after API result exists (brief connect animation)
   useEffect(() => {
     if (phase !== "fetching") return;
+    if (!result) return;
     const t = setTimeout(() => {
       setPhase("scanning");
       scanStartRef.current = Date.now();
-    }, 2000);
+    }, 800);
     return () => clearTimeout(t);
-  }, [phase]);
+  }, [phase, result]);
 
   // Phase 2 → 3: when result available AND at least 3s of scanning elapsed
   useEffect(() => {
@@ -55,10 +81,31 @@ export default function AnalysisJourney({
   // Phase 4 → 5: fired by SplitStreamAnimation onComplete
   const handleStreamComplete = useCallback(() => setPhase("invoice"), []);
 
+  if (error && !result) {
+    return (
+      <div className="relative bg-bg-surface border border-border rounded-lg p-6 space-y-4">
+        <div className="bg-accent-orange-bg border border-accent-orange/20 rounded-md px-4 py-3">
+          <p className="text-[13px] font-semibold text-accent-orange">
+            Analysis could not be completed
+          </p>
+          <p className="text-[12px] text-text-secondary mt-1 leading-relaxed">
+            {error}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onReset}
+          className="px-5 py-2.5 rounded-md bg-transparent border border-border text-[13px] font-medium text-text-tertiary hover:text-accent-teal hover:border-accent-teal transition-colors"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
-      {/* Error banner */}
-      {error && (
+      {error && result && (
         <div className="bg-accent-orange-bg border border-accent-orange/20 rounded-md px-4 py-2 mb-4">
           <p className="text-[12px] text-accent-orange">{error}</p>
         </div>
@@ -71,11 +118,14 @@ export default function AnalysisJourney({
         </div>
       )}
 
-      {/* Phase 2: Code Scan */}
-      {phase === "scanning" && (
+      {/* Phase 2: Code Scan (real snippets + metrics from analysis) */}
+      {phase === "scanning" && result && (
         <div className="animate-fade-in">
           <CodeScanAnimation
-            commitsTotal={result?.commitsAnalyzed || 47}
+            commitsTotal={result.commitsAnalyzed}
+            codeSnippets={result.codeSnippets}
+            totalLineChanges={scanExtras.totalLineChanges}
+            contributorImpactTiers={scanExtras.contributorImpactTiers}
           />
         </div>
       )}

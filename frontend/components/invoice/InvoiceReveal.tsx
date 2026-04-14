@@ -6,6 +6,7 @@ import MiniRadar from "./shared/MiniRadar";
 import EvidenceLink from "./shared/EvidenceLink";
 import WalletAddressProvenance from "./shared/WalletAddressProvenance";
 import { shortenAddress } from "@/lib/wallet";
+import { formatNumberEnUS } from "@/lib/format";
 
 const RANK_COLORS = ["#2DD4A8", "#F59E42", "#8B93A8", "rgba(45,212,168,0.5)", "#5A6275"];
 
@@ -58,7 +59,7 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
             <div>
               <p className="text-[28px] font-bold text-text-primary leading-none mb-1">
                 <span className="text-accent-teal">$</span>
-                {invoice.total.toLocaleString()}
+                {formatNumberEnUS(invoice.total)}
                 <span className="text-[14px] font-normal text-text-tertiary ml-2">
                   {invoice.currency}
                 </span>
@@ -122,8 +123,8 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
                           </p>
                           <p className="text-[11px] text-text-secondary mt-0.5">
                             {item.commits} commits &middot; +
-                            {item.linesAdded.toLocaleString()} / -
-                            {item.linesDeleted.toLocaleString()}
+                            {formatNumberEnUS(item.linesAdded)} / -
+                            {formatNumberEnUS(item.linesDeleted)}
                           </p>
                           {split?.walletAddress && (
                             <div className="mt-0.5">
@@ -209,7 +210,7 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
                     {/* Amount */}
                     <td className="py-3 text-right">
                       <span className="text-[13px] font-semibold text-accent-teal">
-                        ${item.amount.toLocaleString()}
+                        ${formatNumberEnUS(item.amount)}
                       </span>
                     </td>
                   </tr>
@@ -224,7 +225,7 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
               Total
             </span>
             <span className="text-[20px] font-bold text-accent-teal">
-              ${invoice.total.toLocaleString()} {invoice.currency}
+              ${formatNumberEnUS(invoice.total)} {invoice.currency}
             </span>
           </div>
         </div>

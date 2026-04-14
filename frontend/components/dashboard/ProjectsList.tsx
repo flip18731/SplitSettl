@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { DEMO_PROJECTS } from "@/lib/demo-data";
+import { formatNumberEnUS } from "@/lib/format";
 import Card, { CardHeader } from "@/components/shared/Card";
 import SplitBar from "@/components/shared/SplitBar";
 
@@ -29,7 +30,7 @@ export default function ProjectsList() {
                 </p>
               </div>
               <p className="text-[17px] font-semibold text-text-primary">
-                ${project.totalPaid.toLocaleString()}
+                ${formatNumberEnUS(project.totalPaid)}
               </p>
             </div>
             <SplitBar splits={project.contributors.map((c) => c.splitBps / 100)} />

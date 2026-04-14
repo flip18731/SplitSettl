@@ -11,6 +11,8 @@ interface CommitData {
   /** Full commit message body — needed for wallet 0x… in later lines */
   fullMessage: string;
   author: string;
+  /** commit.commit.author.email — used to detect bots / automated committers */
+  authorEmail: string;
   login: string; // GitHub username (login), used to match .splitsettle.json
   date: string;
   additions: number;
@@ -21,6 +23,86 @@ interface CommitData {
 
 interface SplitSettleConfig {
   contributors: Record<string, string>; // { "github-login": "0xWalletAddress" }
+}
+
+/**
+ * Automation / bots / typical AI commit identities — excluded from payment splits.
+ * Heuristic; tune as needed.
+ */
+function isLikelyBotOrAutomationAuthor(c: CommitData): boolean {
+  const name = (c.author || "").trim();
+  const login = (c.login || "").trim();
+  const email = (c.authorEmail || "").trim().toLowerCase();
+  const nameLower = name.toLowerCase();
+  const loginLower = login.toLowerCase();
+
+  // GitHub Apps: login ends with [bot]
+  if (/\[bot\]$/i.test(login)) return true;
+
+  // Known CI / dependency / meta accounts
+  const blockedLoginPrefixes = [
+    "dependabot",
+    "renovate",
+    "renovatebot",
+    "imgbot",
+    "greenkeeper",
+    "snyk-bot",
+    "snyk",
+    "allcontributors",
+    "scala-steward",
+    "netlify",
+    "vercel",
+    "codecov",
+    "sonarcloud",
+    "semantic-release",
+    "release-please",
+    "stale",
+    "kodiakhq",
+    "mergify",
+    "pull",
+    "sizebot",
+  ];
+  for (const p of blockedLoginPrefixes) {
+    if (loginLower === p || loginLower.startsWith(`${p}[`) || loginLower.startsWith(`${p}-`))
+      return true;
+  }
+
+  const blockedExactLogins = new Set([
+    "github-actions",
+    "actions-user",
+    "babel-bot",
+    "dotnet-maestro",
+    "pyup-bot",
+  ]);
+  if (blockedExactLogins.has(loginLower)) return true;
+
+  // Service-style author names
+  if (
+    /\bdependabot\b|\brenovate\b|\bimgbot\b|\bstale bot\b|\brelease.?please\b|\bsemantic.?release\b/i.test(
+      nameLower
+    )
+  )
+    return true;
+
+  // AI / assistant identities (commits authored as the tool, not a human)
+  if (/\b(claude\s+code|chatgpt|gpt-4|openai\s*bot)\b/i.test(nameLower)) return true;
+  if (/^claude$/i.test(name) && /@anthropic|anthropic/i.test(email)) return true;
+  if (/(noreply|no-reply).*@(anthropic|openai)\.com/i.test(email)) return true;
+
+  // GitHub noreply: numeric+service@users.noreply.github.com (bots / apps)
+  if (email.includes("@users.noreply.github.com")) {
+    const local = email.split("@")[0] || "";
+    if (
+      /\+(dependabot|renovate|claude|copilot|github-actions|bot)/i.test(local) ||
+      /^dependabot|^renovate/i.test(local)
+    )
+      return true;
+  }
+
+  // Copilot / sweep agents
+  if (/copilot|swe-agent/i.test(loginLower) && /bot|\[bot\]|agent/i.test(loginLower)) return true;
+
+  return false;
 }
 
 interface ContributorSummary {
@@ -90,11 +172,16 @@ async function fetchRepoCommits(
         `https://api.github.com/repos/${owner}/${repo}/commits/${commit.sha}`
       );
       const fullMsg = commit.commit.message || "";
+      const authorEmail =
+        typeof commit.commit.author?.email === "string"
+          ? commit.commit.author.email
+          : "";
       detailed.push({
         sha: commit.sha.substring(0, 7),
         message: fullMsg.split("\n")[0],
         fullMessage: fullMsg,
         author: commit.commit.author.name,
+        authorEmail,
         login: (commit.author?.login as string) || commit.commit.author.name,
         date: commit.commit.author.date,
         additions: detail.stats?.additions || 0,
@@ -250,10 +337,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const contributors = groupByAuthor(commits);
+    const humanCommits = commits.filter((c) => !isLikelyBotOrAutomationAuthor(c));
+    if (humanCommits.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "No human-authored commits in the analyzed range — only automation/bot activity was detected. Bots and CI are excluded from payment splits.",
+        },
+        { status: 422 }
+      );
+    }
+
+    const contributors = groupByAuthor(humanCommits);
 
     // Extract code snippets for the front-end code scan animation
-    const codeSnippets = commits
+    const codeSnippets = humanCommits
       .filter((c) => c.patch && c.patch.length > 20)
       .slice(0, 8)
       .map((c) => ({
@@ -307,6 +405,8 @@ ${top5
             max_tokens: 2500,
             system: `You are the AI payment agent for SplitSettl on HashKey Chain. You analyze REAL GitHub commits with actual code diffs to determine fair payment splits based on IMPACT, not just quantity.
 
+The commit list you receive EXCLUDES bots, CI accounts, dependency bots (Dependabot/Renovate/etc.), and typical automated/AI commit identities — only human contributors are in scope for payment.
+
 CRITICAL SCORING PHILOSOPHY:
 - A contributor with 5 high-complexity commits (new smart contract, security fix, core algorithm) should receive MORE than someone with 20 low-complexity commits (documentation edits, config changes, formatting fixes)
 - Quality of code matters more than quantity of commits
@@ -341,7 +441,7 @@ Return this exact JSON structure:
 {
   "repository": "${owner}/${repo}",
   "branch": "${branch}",
-  "commitsAnalyzed": ${commits.length},
+  "commitsAnalyzed": ${humanCommits.length},
   "splits": [
     {
       "name": "author name",
@@ -407,11 +507,13 @@ Return this exact JSON structure:
         owner,
         repo,
         branch,
-        commits,
+        humanCommits,
         contributors,
         totalBudget
       );
     }
+
+    result.commitsAnalyzed = humanCommits.length;
 
     // Attach visualization data
     result.visualizationData = {
@@ -440,7 +542,7 @@ Return this exact JSON structure:
           {}
         ),
       })),
-      allCommits: commits.map((c) => ({
+      allCommits: humanCommits.map((c) => ({
         date: c.date,
         author: c.author,
         additions: c.additions,
@@ -622,7 +724,7 @@ function buildFallbackFromGitHub(
     aiSummary: contributors
       .map(
         (c) =>
-          `${c.name} contributed ${c.commits.length} commits with ${(c.totalAdditions + c.totalDeletions).toLocaleString()} lines changed`
+          `${c.name} contributed ${c.commits.length} commits with ${(c.totalAdditions + c.totalDeletions).toLocaleString("en-US")} lines changed`
       )
       .join(". ") + ".",
   };

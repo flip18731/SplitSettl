@@ -2,6 +2,7 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import type { VisualizationData } from "@/lib/ai";
+import { formatNumberEnUS } from "@/lib/format";
 
 const COLORS = ["#2DD4A8", "#F59E42", "#8B93A8", "rgba(45,212,168,0.5)"];
 
@@ -51,7 +52,7 @@ export default function CodeImpactRing({ data }: Props) {
                   <div className="bg-bg-surface border border-border rounded-lg px-3 py-2">
                     <p className="text-[12px] font-semibold text-text-primary">{d.name}</p>
                     <p className="text-[11px] text-text-secondary mt-0.5">
-                      {Number(d.value).toLocaleString()} lines ({pct}%)
+                      {formatNumberEnUS(Number(d.value))} lines ({pct}%)
                     </p>
                   </div>
                 );
@@ -63,7 +64,7 @@ export default function CodeImpactRing({ data }: Props) {
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center">
             <p className="text-[22px] font-light text-text-primary leading-none">
-              {totalLines.toLocaleString()}
+              {formatNumberEnUS(totalLines)}
             </p>
             <p className="text-[10px] text-text-tertiary mt-1">total lines</p>
           </div>
