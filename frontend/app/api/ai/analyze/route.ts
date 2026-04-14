@@ -487,14 +487,20 @@ Return this exact JSON structure:
           const addr =
             splitSettleConfig.contributors[login] ||
             splitSettleConfig.contributors[split.name];
-          if (addr) split.walletAddress = addr;
+          if (addr) {
+            split.walletAddress = addr;
+            split.walletAddressSource = "splitsettle";
+          }
         }
         // 2) Ethereum address embedded in this contributor's commit messages
         if (!split.walletAddress && contributor) {
           const fromMsg = findWalletInCommitMessages(
             contributor.commits.map((cm) => cm.fullMessage)
           );
-          if (fromMsg) split.walletAddress = fromMsg;
+          if (fromMsg) {
+            split.walletAddress = fromMsg;
+            split.walletAddressSource = "commit-message";
+          }
         }
       }
     }

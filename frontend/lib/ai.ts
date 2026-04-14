@@ -47,6 +47,9 @@ export interface CodePatch {
   code: string;
 }
 
+/** Where SplitSettl took the payout address from (set by /api/ai/analyze). */
+export type WalletAddressSource = "splitsettle" | "commit-message";
+
 export interface AISplit {
   name: string;
   percentage: number;
@@ -55,7 +58,23 @@ export interface AISplit {
   impactRating: "HIGH" | "MEDIUM" | "LOW";
   impactScores: ImpactScores;
   keyEvidence: KeyEvidence[];
-  walletAddress?: string; // from .splitsettle.json in the repo
+  walletAddress?: string;
+  /** Set when wallet was resolved during analysis */
+  walletAddressSource?: WalletAddressSource;
+}
+
+/** Short German label for UI tooltips / hints */
+export function walletAddressSourceDescription(
+  source?: WalletAddressSource
+): string | null {
+  switch (source) {
+    case "splitsettle":
+      return "Aus `.splitsettle.json` im Repository";
+    case "commit-message":
+      return "Aus einer Commit-Message in der GitHub-Historie";
+    default:
+      return null;
+  }
 }
 
 export interface AIInvoiceItem {
