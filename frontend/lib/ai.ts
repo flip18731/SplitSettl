@@ -55,6 +55,7 @@ export interface AISplit {
   impactRating: "HIGH" | "MEDIUM" | "LOW";
   impactScores: ImpactScores;
   keyEvidence: KeyEvidence[];
+  walletAddress?: string; // from .splitsettle.json in the repo
 }
 
 export interface AIInvoiceItem {
@@ -86,4 +87,5 @@ export interface AIAnalysisResult {
   visualizationData: VisualizationData;
   aiSummary: string;
   codeSnippets: CodePatch[];
+  hasAddressConfig?: boolean; // true if .splitsettle.json was found in the repo
 }

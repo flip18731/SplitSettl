@@ -179,6 +179,7 @@ export const SAMPLE_RESULT: AIAnalysisResult = {
     total: 1200,
     currency: "USDT",
   },
+  hasAddressConfig: false,
   visualizationData: {
     contributors: [
       {

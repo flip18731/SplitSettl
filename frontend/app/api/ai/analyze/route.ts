@@ -7,6 +7,7 @@ interface CommitData {
   sha: string;
   message: string;
   author: string;
+  login: string; // GitHub username (login), used to match .splitsettle.json
   date: string;
   additions: number;
   deletions: number;
@@ -14,8 +15,13 @@ interface CommitData {
   patch?: string;
 }
 
+interface SplitSettleConfig {
+  contributors: Record<string, string>; // { "github-login": "0xWalletAddress" }
+}
+
 interface ContributorSummary {
   name: string;
+  login: string; // primary GitHub login for this contributor
   commits: CommitData[];
   totalAdditions: number;
   totalDeletions: number;
@@ -56,6 +62,7 @@ async function fetchRepoCommits(
         sha: commit.sha.substring(0, 7),
         message: commit.commit.message.split("\n")[0],
         author: commit.commit.author.name,
+        login: (commit.author?.login as string) || commit.commit.author.name,
         date: commit.commit.author.date,
         additions: detail.stats?.additions || 0,
         deletions: detail.stats?.deletions || 0,
@@ -102,8 +109,16 @@ function groupByAuthor(commits: CommitData[]): ContributorSummary[] {
       dailyActivity[day] = (dailyActivity[day] || 0) + 1;
     }
 
+    // Use the most common login for this author name
+    const loginCounts: Record<string, number> = {};
+    for (const c of authorCommits) {
+      loginCounts[c.login] = (loginCounts[c.login] || 0) + 1;
+    }
+    const primaryLogin = Object.entries(loginCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || name;
+
     return {
       name,
+      login: primaryLogin,
       commits: authorCommits,
       totalAdditions: authorCommits.reduce((s, c) => s + c.additions, 0),
       totalDeletions: authorCommits.reduce((s, c) => s + c.deletions, 0),
@@ -179,6 +194,20 @@ export async function POST(req: NextRequest) {
     }
     const [, owner, rawRepo] = match;
     const repo = rawRepo.replace(".git", "");
+
+    // Try to fetch .splitsettle.json for auto wallet address mapping
+    let splitSettleConfig: SplitSettleConfig | null = null;
+    try {
+      const configRes = await fetchGitHub(
+        `https://api.github.com/repos/${owner}/${repo}/contents/.splitsettle.json`
+      );
+      if (configRes.content) {
+        const decoded = Buffer.from(configRes.content, "base64").toString("utf-8");
+        splitSettleConfig = JSON.parse(decoded) as SplitSettleConfig;
+      }
+    } catch {
+      // No .splitsettle.json — wallet addresses won't be pre-filled
+    }
 
     const commits = await fetchRepoCommits(owner, repo, branch);
     if (commits.length === 0) {
@@ -424,8 +453,24 @@ Return this exact JSON structure:
             additions: cm.additions,
           }));
         }
+
+        // Attach wallet address from .splitsettle.json if available
+        if (splitSettleConfig?.contributors) {
+          const contributor = contributors.find((c) => c.name === split.name);
+          const login = contributor?.login || split.name;
+          // Try login first, then display name
+          const addr =
+            splitSettleConfig.contributors[login] ||
+            splitSettleConfig.contributors[split.name];
+          if (addr) split.walletAddress = addr;
+        }
       }
     }
+
+    // Flag whether auto address configuration was found
+    result.hasAddressConfig =
+      splitSettleConfig !== null &&
+      Object.keys(splitSettleConfig.contributors || {}).length > 0;
 
     // Ensure all invoice items have impactRating
     if (result.invoice?.items) {

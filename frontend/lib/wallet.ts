@@ -1,4 +1,4 @@
-import { HASHKEY_TESTNET } from "./contract";
+import { HASHKEY_TESTNET, HASHKEY_MAINNET, getActiveChainConfig } from "./contract";
 
 declare global {
   interface Window {
@@ -22,20 +22,22 @@ export async function connectWallet(): Promise<string | null> {
       method: "eth_requestAccounts",
     })) as string[];
 
-    await switchToHashKeyTestnet();
+    await switchToHashKeyChain();
     return accounts[0] || null;
   } catch {
     return null;
   }
 }
 
-export async function switchToHashKeyTestnet(): Promise<void> {
+/** Switch MetaMask to the active HashKey Chain (testnet or mainnet based on env). */
+export async function switchToHashKeyChain(): Promise<void> {
   if (!window.ethereum) return;
+  const chain = getActiveChainConfig();
 
   try {
     await window.ethereum.request({
       method: "wallet_switchEthereumChain",
-      params: [{ chainId: HASHKEY_TESTNET.chainIdHex }],
+      params: [{ chainId: chain.chainIdHex }],
     });
   } catch (switchError: unknown) {
     const err = switchError as { code?: number };
@@ -44,16 +46,53 @@ export async function switchToHashKeyTestnet(): Promise<void> {
         method: "wallet_addEthereumChain",
         params: [
           {
-            chainId: HASHKEY_TESTNET.chainIdHex,
-            chainName: HASHKEY_TESTNET.name,
-            rpcUrls: [HASHKEY_TESTNET.rpcUrl],
-            blockExplorerUrls: [HASHKEY_TESTNET.explorer],
-            nativeCurrency: HASHKEY_TESTNET.nativeCurrency,
+            chainId: chain.chainIdHex,
+            chainName: chain.name,
+            rpcUrls: [chain.rpcUrl],
+            blockExplorerUrls: [chain.explorer],
+            nativeCurrency: chain.nativeCurrency,
           },
         ],
       });
     }
   }
+}
+
+/** Backward-compatible alias. */
+export const switchToHashKeyTestnet = switchToHashKeyChain;
+
+/** Add HashKey Chain Testnet to MetaMask (always testnet, used in network selector UI). */
+export async function addHashKeyTestnet(): Promise<void> {
+  if (!window.ethereum) return;
+  await window.ethereum.request({
+    method: "wallet_addEthereumChain",
+    params: [
+      {
+        chainId: HASHKEY_TESTNET.chainIdHex,
+        chainName: HASHKEY_TESTNET.name,
+        rpcUrls: [HASHKEY_TESTNET.rpcUrl],
+        blockExplorerUrls: [HASHKEY_TESTNET.explorer],
+        nativeCurrency: HASHKEY_TESTNET.nativeCurrency,
+      },
+    ],
+  });
+}
+
+/** Add HashKey Chain Mainnet to MetaMask. */
+export async function addHashKeyMainnet(): Promise<void> {
+  if (!window.ethereum) return;
+  await window.ethereum.request({
+    method: "wallet_addEthereumChain",
+    params: [
+      {
+        chainId: HASHKEY_MAINNET.chainIdHex,
+        chainName: HASHKEY_MAINNET.name,
+        rpcUrls: [HASHKEY_MAINNET.rpcUrl],
+        blockExplorerUrls: [HASHKEY_MAINNET.explorer],
+        nativeCurrency: HASHKEY_MAINNET.nativeCurrency,
+      },
+    ],
+  });
 }
 
 export async function getBalance(address: string): Promise<string> {

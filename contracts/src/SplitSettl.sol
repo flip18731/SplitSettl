@@ -4,6 +4,10 @@ pragma solidity ^0.8.19;
 import "./interfaces/IERC20.sol";
 
 contract SplitSettl {
+    // Official HashKey Chain mainnet stablecoin addresses
+    address public constant USDT_MAINNET = 0xf1b50ed67a9e2cc94ad3c477779e2d4cbfff9029;
+    address public constant USDC_MAINNET = 0x054ed45810DbBAb8B27668922D110669c9D88D0a;
+
     struct Contributor {
         address addr;
         uint256 splitBps; // basis points, 10000 = 100%
@@ -48,6 +52,7 @@ contract SplitSettl {
     mapping(address => uint256) public contributorTotalEarnings;
     mapping(string => HSPMessage) public hspMessages;
     mapping(address => uint256[]) public contributorProjects;
+    mapping(uint256 => string[]) public projectHSPMessageIds;
 
     // Events
     event ProjectCreated(uint256 indexed projectId, string name, address owner);
@@ -164,11 +169,41 @@ contract SplitSettl {
         uint256 projectId,
         address token,
         uint256 amount,
-        string calldata invoiceRef
+        string calldata invoiceRef,
+        string calldata hspRequestId
     ) external projectExists(projectId) {
         require(amount > 0, "Amount must be > 0");
+
+        // Stage 1: HSP Payment Request — record intent on-chain before funds move
+        hspMessages[hspRequestId] = HSPMessage({
+            projectId: projectId,
+            amount: amount,
+            status: HSPStatus.Requested,
+            txHash: bytes32(0),
+            requestedAt: block.timestamp,
+            confirmedAt: 0,
+            receiptAt: 0
+        });
+        projectHSPMessageIds[projectId].push(hspRequestId);
+        emit HSPRequestCreated(projectId, hspRequestId, amount);
+
+        // Stage 2: Transfer ERC20 and split to contributors
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         _splitAndPay(projectId, amount, invoiceRef, token);
+
+        // Stage 2b: HSP Confirmation — funds distributed
+        hspMessages[hspRequestId].status = HSPStatus.Confirmed;
+        hspMessages[hspRequestId].confirmedAt = block.timestamp;
+        emit HSPConfirmed(projectId, hspRequestId);
+
+        // Stage 3: HSP Receipt — immutable audit trail with deterministic tx reference
+        bytes32 txRef = keccak256(
+            abi.encodePacked(projectId, amount, block.timestamp, hspRequestId)
+        );
+        hspMessages[hspRequestId].status = HSPStatus.ReceiptGenerated;
+        hspMessages[hspRequestId].txHash = txRef;
+        hspMessages[hspRequestId].receiptAt = block.timestamp;
+        emit HSPReceiptGenerated(projectId, hspRequestId, txRef);
     }
 
     function _splitAndPay(
@@ -236,6 +271,7 @@ contract SplitSettl {
             confirmedAt: 0,
             receiptAt: 0
         });
+        projectHSPMessageIds[projectId].push(hspRequestId);
 
         emit HSPRequestCreated(projectId, hspRequestId, amount);
     }
@@ -321,6 +357,10 @@ contract SplitSettl {
     ) {
         HSPMessage storage m = hspMessages[hspRequestId];
         return (m.projectId, m.amount, m.status, m.txHash, m.requestedAt, m.confirmedAt, m.receiptAt);
+    }
+
+    function getProjectHSPMessageIds(uint256 projectId) external view returns (string[] memory) {
+        return projectHSPMessageIds[projectId];
     }
 
     receive() external payable {}

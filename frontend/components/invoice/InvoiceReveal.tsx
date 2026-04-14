@@ -4,6 +4,7 @@ import type { AIAnalysisResult } from "@/lib/ai";
 import ImpactBadge from "./shared/ImpactBadge";
 import MiniRadar from "./shared/MiniRadar";
 import EvidenceLink from "./shared/EvidenceLink";
+import { shortenAddress } from "@/lib/wallet";
 
 const RANK_COLORS = ["#2DD4A8", "#F59E42", "#8B93A8", "rgba(45,212,168,0.5)", "#5A6275"];
 
@@ -65,6 +66,12 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
                 <span className="text-[11px] font-semibold uppercase tracking-[1px] bg-accent-orange-bg text-accent-orange px-2 py-0.5 rounded-full">
                   AI-generated
                 </span>
+                {result.hasAddressConfig && (
+                  <span className="text-[11px] font-semibold uppercase tracking-[1px] bg-accent-teal-bg text-accent-teal px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-accent-teal inline-block" />
+                    Auto-configured
+                  </span>
+                )}
                 <span className="text-[11px] text-text-tertiary">{dateStr}</span>
               </div>
             </div>
@@ -118,6 +125,15 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
                             {item.linesAdded.toLocaleString()} / -
                             {item.linesDeleted.toLocaleString()}
                           </p>
+                          {split?.walletAddress && (
+                            <p className="text-[10px] font-mono text-text-tertiary mt-0.5 flex items-center gap-1">
+                              <span
+                                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: color }}
+                              />
+                              {shortenAddress(split.walletAddress)}
+                            </p>
+                          )}
                           <div className="mt-1">
                             <ImpactBadge rating={item.impactRating} />
                           </div>
@@ -217,7 +233,7 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
               const color = colorMap[split.name] || "#5A6275";
               return (
                 <div key={i}>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="text-[13px] font-semibold text-text-primary">
                       {split.name}
                     </span>
@@ -228,6 +244,11 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
                       {split.percentage}%
                     </span>
                     <ImpactBadge rating={split.impactRating} />
+                    {split.walletAddress && (
+                      <span className="text-[10px] font-mono text-text-tertiary bg-bg-elevated rounded px-1.5 py-0.5">
+                        {shortenAddress(split.walletAddress)}
+                      </span>
+                    )}
                   </div>
                   <p className="text-[12px] text-text-secondary italic leading-relaxed">
                     {split.justification}
