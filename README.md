@@ -164,7 +164,7 @@ The **Invoice** page supports mint → approve → settle on testnet; the **dash
 
 | Token | Address |
 |-------|---------|
-| USDC | `0x79AEc4EeA31D50792F61D1Ca0733C18c89524C9e` |
+| USDC | `0x8FE3cB719Ee4410E236Cd6b72ab1fCDC06eF53c6` *(replaces deprecated `0x79AE…`; per HashKey Merchant, 2026)* |
 | USDT | `0x372325443233fEbaC1F6998aC750276468c83CC6` |
 
 ### Mock token (this repo)

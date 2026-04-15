@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAddress, isAddress } from "ethers";
+import { getAddress, isAddress, ZeroAddress } from "ethers";
 import {
   buildCartMandateContents,
   getDefaultPayToAddress,
@@ -49,13 +49,33 @@ export async function POST(req: NextRequest) {
     rawPay && isAddress(rawPay)
       ? getAddress(rawPay)
       : rawPay;
+
+  if (!payTo || !isAddress(payTo) || payTo === getAddress(ZeroAddress)) {
+    return NextResponse.json(
+      {
+        error:
+          "Invalid pay_to: set NEXT_PUBLIC_CONTRACT_ADDRESS (deployed SplitSettl) in .env.local / Vercel.",
+        fallback: true,
+      },
+      { status: 400 }
+    );
+  }
+
   const isTestnet = process.env.NEXT_PUBLIC_CHAIN_ID !== "177";
-  const coin: "USDC" | "USDT" = coinRaw === "USDT" ? "USDT" : "USDC";
+  const envCoin = process.env.HSP_SETTLEMENT_COIN?.trim().toUpperCase();
+  let coin: "USDC" | "USDT" =
+    coinRaw === "USDT" ? "USDT" : "USDC";
+  if (envCoin === "USDT" || envCoin === "USDC") {
+    coin = envCoin;
+  }
+
+  /** Same currency on every line + total — mixed USD/USDT caused HSP 10001. */
+  const displayCurrency = (invoice.currency || "USD").trim() || "USD";
 
   const displayItems: HspDisplayItem[] = invoice.items.map((item) => ({
     label: `${displayFirstName(item.contributor)}: ${(item.description || "Work").slice(0, 80)}`,
     amount: {
-      currency: invoice.currency || "USD",
+      currency: displayCurrency,
       value: Number(item.amount).toFixed(2),
     },
   }));
@@ -70,6 +90,7 @@ export async function POST(req: NextRequest) {
       invoiceId: invoice.id,
       paymentRequestId,
       amount: amountStr,
+      displayCurrency,
       payTo,
       displayItems,
       coin,

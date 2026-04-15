@@ -37,7 +37,7 @@ export const MOCK_USDT_ADDRESS = process.env.NEXT_PUBLIC_MOCK_USDT_ADDRESS || ""
 export const HSP_USDT_HASHKEY_TESTNET =
   "0x372325443233fEbaC1F6998aC750276468c83CC6";
 export const HSP_USDC_HASHKEY_TESTNET =
-  "0x79AEc4EeA31D50792F61D1Ca0733C18c89524C9e";
+  "0x8FE3cB719Ee4410E236Cd6b72ab1fCDC06eF53c6";
 
 /** Returns the chain config for the currently active network. */
 export function getActiveChainConfig() {

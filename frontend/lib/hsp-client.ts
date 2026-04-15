@@ -56,7 +56,7 @@ export function isHspClientConfigured(): boolean {
 export const HSP_TOKENS = {
   testnet: {
     USDC: {
-      address: "0x79AEc4EeA31D50792F61D1Ca0733C18c89524C9e",
+      address: "0x8FE3cB719Ee4410E236Cd6b72ab1fCDC06eF53c6",
       decimals: 6,
       protocol: "eip3009",
     },
@@ -165,6 +165,8 @@ export type BuildCartParams = {
   invoiceId: string;
   paymentRequestId: string;
   amount: string;
+  /** Must match every line item `amount.currency` and `details.total` (API validates consistency). */
+  displayCurrency: string;
   payTo: string;
   displayItems: HspDisplayItem[];
   coin: "USDC" | "USDT";
@@ -201,7 +203,7 @@ export function buildCartMandateContents(params: BuildCartParams): Record<string
         display_items: params.displayItems,
         total: {
           label: "Total",
-          amount: { currency: "USD", value: params.amount },
+          amount: { currency: params.displayCurrency, value: params.amount },
         },
       },
     },
@@ -210,8 +212,17 @@ export function buildCartMandateContents(params: BuildCartParams): Record<string
   };
 }
 
-const defaultRedirect = () =>
-  `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/invoice?hsp=complete`;
+/**
+ * Post-checkout redirect. Merchant QA often rejects non-HTTPS URLs → 10001.
+ * Prefer HSP_REDIRECT_URL, then https NEXT_PUBLIC_APP_URL, else production fallback.
+ */
+const defaultRedirect = (): string => {
+  const explicit = process.env.HSP_REDIRECT_URL?.trim();
+  if (explicit) return explicit;
+  const app = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "") ?? "";
+  if (app.startsWith("https://")) return `${app}/invoice?hsp=complete`;
+  return "https://split-settl.vercel.app/invoice?hsp=complete";
+};
 
 /** Submit cart mandate (POST) — `contents` must match JWT `cart_hash` input. */
 export async function submitCartMandate(params: {
@@ -237,6 +248,7 @@ export async function createHSPOrder(params: {
   invoiceId: string;
   paymentRequestId: string;
   amount: string;
+  displayCurrency: string;
   payTo: string;
   displayItems: HspDisplayItem[];
   coin: "USDC" | "USDT";
@@ -248,6 +260,7 @@ export async function createHSPOrder(params: {
     invoiceId: params.invoiceId,
     paymentRequestId: params.paymentRequestId,
     amount: params.amount,
+    displayCurrency: params.displayCurrency,
     payTo: params.payTo,
     displayItems: params.displayItems,
     coin: params.coin,
