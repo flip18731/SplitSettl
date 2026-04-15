@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAddress, isAddress } from "ethers";
 
 /** Trim so accidental whitespace in .env does not break the key */
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY?.trim() || "";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY?.trim() || "";
 /** Default cost-efficient model; override with OPENAI_MODEL=gpt-4o etc. */
 const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
@@ -305,7 +304,7 @@ function computeImpactRating(scores: {
   return "LOW";
 }
 
-type LlmProviderName = "openai" | "anthropic";
+type LlmProviderName = "openai";
 
 function buildAnalysisLlmPrompts(
   owner: string,
@@ -464,7 +463,7 @@ export async function POST(req: NextRequest) {
         code: (c.patch || "").substring(0, 300),
       }));
 
-    // Build context for Claude
+    // Build context for the LLM
     const context = contributors
       .map((c) => {
         const top5 = c.commits
@@ -493,7 +492,7 @@ ${top5
       })
       .join("\n");
 
-    // LLM JSON (OpenAI and/or Anthropic) + server enrichments
+    // LLM JSON (OpenAI) + server enrichments
     let result: Record<string, unknown> | null = null;
     let llmError: string | undefined;
     let llmJsonOk = false;
@@ -502,7 +501,7 @@ ${top5
     let providerPref = (process.env.AI_ANALYSIS_PROVIDER || "auto")
       .trim()
       .toLowerCase();
-    if (!["openai", "anthropic", "auto"].includes(providerPref)) {
+    if (!["openai", "auto"].includes(providerPref)) {
       providerPref = "auto";
     }
     const { system: systemPrompt, user: userPrompt } = buildAnalysisLlmPrompts(
@@ -547,54 +546,17 @@ ${top5
       }
     };
 
-    const callAnthropic = async () => {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 2500,
-          system: systemPrompt,
-          messages: [{ role: "user", content: userPrompt }],
-        }),
-      });
-      if (response.ok) {
-        const data = (await response.json()) as {
-          content?: Array<{ text?: string }>;
-        };
-        const text = data.content?.[0]?.text || "";
-        result = parseJsonFromLlmText(text);
-        llmJsonOk = true;
-        llmProvider = "anthropic";
-      } else {
-        const errText = await response.text();
-        const err = `Anthropic HTTP ${response.status}: ${errText.slice(0, 500)}`;
-        console.error("[analyze] Anthropic API error:", err);
-        llmError = llmError ? `${llmError} | ${err}` : err;
-      }
-    };
-
     try {
       if (providerPref === "openai") {
         if (OPENAI_API_KEY) await callOpenAI();
         else
           llmError = "AI_ANALYSIS_PROVIDER=openai but OPENAI_API_KEY is missing";
-      } else if (providerPref === "anthropic") {
-        if (ANTHROPIC_API_KEY) await callAnthropic();
-        else
-          llmError =
-            "AI_ANALYSIS_PROVIDER=anthropic but ANTHROPIC_API_KEY is missing";
       } else {
-        // auto: prefer OpenAI when key present, else Anthropic
+        // auto: use OpenAI when key present
         if (OPENAI_API_KEY) await callOpenAI();
-        if (!llmJsonOk && ANTHROPIC_API_KEY) await callAnthropic();
-        if (!OPENAI_API_KEY && !ANTHROPIC_API_KEY) {
+        if (!OPENAI_API_KEY) {
           console.warn(
-            "[analyze] No OPENAI_API_KEY or ANTHROPIC_API_KEY — using GitHub-only fallback. Add a key to frontend/.env.local and restart next dev."
+            "[analyze] No OPENAI_API_KEY — using GitHub-only fallback. Add OPENAI_API_KEY to frontend/.env.local and restart next dev."
           );
         }
       }
@@ -604,7 +566,7 @@ ${top5
       console.error("[analyze] LLM error:", e);
     }
 
-    // If Claude failed or no key, build result from GitHub data directly
+    // If OpenAI failed or no key, build result from GitHub data directly
     if (!result) {
       result = buildFallbackFromGitHub(
         owner,

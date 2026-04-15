@@ -78,12 +78,11 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
               </div>
               {result.analysisSource === "fallback" && (
                 <p className="text-[11px] text-accent-orange mt-3 leading-relaxed max-w-xl">
-                  <strong>Fallback-Modus:</strong> Weder OpenAI noch Anthropic hat erfolgreich geantwortet —
+                  <strong>Fallback-Modus:</strong> OpenAI hat nicht erfolgreich geantwortet (oder kein API-Key) —
                   Splits stammen aus Zeilenstatistik + Heuristik. Prüfe{" "}
-                  <code className="text-[10px] bg-bg-elevated px-1 rounded">OPENAI_API_KEY</code> oder{" "}
-                  <code className="text-[10px] bg-bg-elevated px-1 rounded">ANTHROPIC_API_KEY</code> in{" "}
+                  <code className="text-[10px] bg-bg-elevated px-1 rounded">OPENAI_API_KEY</code> in{" "}
                   <code className="text-[10px] bg-bg-elevated px-1 rounded">frontend/.env.local</code>, optional{" "}
-                  <code className="text-[10px] bg-bg-elevated px-1 rounded">AI_ANALYSIS_PROVIDER</code>, und
+                  <code className="text-[10px] bg-bg-elevated px-1 rounded">AI_ANALYSIS_PROVIDER=openai|auto</code>, und
                   Server-Neustart.
                   {result.analysisError && (
                     <span className="block font-mono text-[10px] mt-1.5 text-text-secondary break-all">
@@ -92,11 +91,9 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
                   )}
                 </p>
               )}
-              {(result.analysisSource === "openai" ||
-                result.analysisSource === "anthropic") && (
+              {result.analysisSource === "openai" && (
                 <p className="text-[10px] text-text-tertiary mt-2 font-mono">
-                  Analyse:{" "}
-                  {result.analysisSource === "openai" ? "OpenAI" : "Anthropic Claude"}
+                  Analyse: OpenAI
                 </p>
               )}
             </div>

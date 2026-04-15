@@ -19,13 +19,13 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Next.js-14-000000?logo=next.js" alt="Next.js" />
   <img src="https://img.shields.io/badge/Solidity-0.8.19-363636?logo=solidity" alt="Solidity" />
-  <img src="https://img.shields.io/badge/Claude-AI-CC785C?logo=anthropic" alt="Claude" />
+  <img src="https://img.shields.io/badge/OpenAI-gpt--4o--mini-412991?logo=openai" alt="OpenAI" />
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" />
 </p>
 
 ---
 
-> **One-liner:** SplitSettl reads real GitHub commits, scores contributor **impact** with Claude, builds a transparent invoice, and settles **atomically on-chain** on HashKey Chain — with **HSP** both as **HashKey Merchant checkout** and as a **3-stage on-chain lifecycle** in the smart contract.
+> **One-liner:** SplitSettl reads real GitHub commits, scores contributor **impact** with an **OpenAI** LLM, builds a transparent invoice, and settles **atomically on-chain** on HashKey Chain — with **HSP** both as **HashKey Merchant checkout** and as a **3-stage on-chain lifecycle** in the smart contract.
 
 ---
 
@@ -69,7 +69,7 @@ Teams paid in **lump sums** (DAOs, grants) still split money **manually**. That 
 
 ### Solution
 
-**SplitSettl** uses **Claude** on **real GitHub data** (commits, diffs) to produce **impact-weighted splits**, a proper **invoice**, and **one-transaction ERC20 settlement** on **HashKey Chain**. The **HSP** story is twofold:
+**SplitSettl** uses **OpenAI** on **real GitHub data** (commits, diffs) to produce **impact-weighted splits**, a proper **invoice**, and **one-transaction ERC20 settlement** on **HashKey Chain**. The **HSP** story is twofold:
 
 1. **HashKey Merchant API** — server-side **cart mandate** + checkout URL (`/api/hsp/create-order`, HMAC + ES256K JWT in `frontend/lib/hsp-client.ts`, `hsp-jwt.ts`).
 2. **On-chain HSP lifecycle** — `SplitSettl.sol` emits **Request → Confirmation → Receipt** for direct wallet flows (`submitPaymentERC20`).
@@ -111,7 +111,7 @@ Smart contracts (HashKey Chain)
 
 - Root: `npm install` → `npm run build` runs `frontend` build (see root `package.json`).
 - Or set Vercel **Root Directory** to `frontend` and use the Next.js defaults.
-- Configure **`NEXT_PUBLIC_*`** and server secrets (`ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, optional `HSP_*`) in **Vercel → Environment Variables**.
+- Configure **`NEXT_PUBLIC_*`** and server secrets (`OPENAI_API_KEY`, `GITHUB_TOKEN`, optional `HSP_*`) in **Vercel → Environment Variables**.
 
 ---
 
@@ -196,7 +196,7 @@ Optional: a valid `0x` + 40 hex in a contributor’s **commit message** — see 
 
 ## How AI is Used
 
-Model: **Claude** (`claude-sonnet-4-20250514`) on real diffs. Five dimensions:
+Model: **OpenAI** (default `gpt-4o-mini`, override with `OPENAI_MODEL`) on real diffs. Five dimensions:
 
 | Dimension | Weight | Meaning |
 |-----------|--------|---------|
@@ -223,7 +223,7 @@ On **Invoices**, analysis runs as a staged UI: fetch → code scan → impact ra
 | Chain | HashKey Chain (testnet 133 / mainnet 177) |
 | Contracts | Solidity 0.8.19, Hardhat |
 | App | Next.js 14, TypeScript, Tailwind |
-| AI | Anthropic Claude |
+| AI | OpenAI (Chat Completions API) |
 | Settlement | HSP Merchant API + `SplitSettl.sol` lifecycle |
 | Wallet | MetaMask, ethers.js v6 |
 
@@ -248,7 +248,7 @@ cd ../frontend && npm install
 
 ```bash
 cp .env.example .env
-# PRIVATE_KEY, ANTHROPIC_API_KEY, GITHUB_TOKEN …
+# PRIVATE_KEY, OPENAI_API_KEY, GITHUB_TOKEN …
 ```
 
 ```bash
@@ -257,7 +257,8 @@ NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
 NEXT_PUBLIC_MOCK_USDT_ADDRESS=0x...
 NEXT_PUBLIC_CHAIN_ID=133
 NEXT_PUBLIC_APP_URL=https://split-settl.vercel.app   # production HSP redirect
-ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o-mini
 GITHUB_TOKEN=ghp_...
 # Optional HSP: HSP_APP_KEY, HSP_APP_SECRET, HSP_MERCHANT_PRIVATE_KEY, HSP_API_BASE
 ```
@@ -297,7 +298,7 @@ cd frontend && npm run dev
 Open the dashboard. Point to the live payment feed, animated flow canvas, and AI agent status. Say that payments align with the 3-stage HSP lifecycle on HashKey Chain.
 
 **Scene 2 — AI Invoice (0:20–1:00)**  
-Go to Invoices. Paste a repo URL (e.g. `https://github.com/anthropics/anthropic-sdk-python`). Run Analyze. Narrate the 5 phases: GitHub fetch → diffs → radar (volume weighted least) → split stream → invoice with commit SHAs and radars.
+Go to Invoices. Paste a repo URL (e.g. `https://github.com/vercel/next.js`). Run Analyze. Narrate the 5 phases: GitHub fetch → diffs → radar (volume weighted least) → split stream → invoice with commit SHAs and radars.
 
 **Scene 3 — Settle (1:00–1:30)**  
 Walk through settlement: HSP request → on-chain split → confirmation → receipt / audit.
@@ -332,7 +333,7 @@ Details, video link, and checklist: **[`SUBMISSION.md`](SUBMISSION.md)**.
 - [x] HSP message IDs stored per project on-chain
 - [x] USDT/USDC mainnet + testnet token references
 - [x] MockUSDT for demos
-- [x] Claude + real GitHub data
+- [x] OpenAI + real GitHub data
 - [x] `.splitsettle.json` + optional commit-message wallets
 - [x] 5-phase invoice UI
 - [x] MetaMask + chain switch

@@ -44,7 +44,7 @@ _If you redeploy, replace both addresses here and in `README.md`._
 ## Pre-flight checklist
 
 - [ ] GitHub **Description**, **Website** (Vercel), and **Topics** filled in (see `README.md` → GitHub repository settings)
-- [ ] Vercel env: `NEXT_PUBLIC_*`, `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, optional `HSP_*` merchant keys
+- [ ] Vercel env: `NEXT_PUBLIC_*`, `OPENAI_API_KEY`, `GITHUB_TOKEN`, optional `HSP_*` merchant keys
 - [ ] `frontend` builds: `npm run build`
 - [ ] Contracts: `cd contracts && npm run compile`
 - [ ] Demo video link added above

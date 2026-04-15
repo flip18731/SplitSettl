@@ -8,7 +8,7 @@ interface RepoInputProps {
 }
 
 export default function RepoInput({ onSubmit, disabled }: RepoInputProps) {
-  const [repoUrl, setRepoUrl] = useState("https://github.com/anthropics/anthropic-sdk-python");
+  const [repoUrl, setRepoUrl] = useState("https://github.com/vercel/next.js");
   const [budget, setBudget] = useState(1200);
   const [branch, setBranch] = useState("main");
 

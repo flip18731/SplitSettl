@@ -129,7 +129,7 @@ export interface AIAnalysisResult {
   codeSnippets: CodePatch[];
   hasAddressConfig?: boolean; // true if .splitsettle.json was found in the repo
   /** Set by /api/ai/analyze: which LLM ran, or GitHub-only fallback */
-  analysisSource?: "openai" | "anthropic" | "fallback";
+  analysisSource?: "openai" | "fallback";
   /** If an LLM was expected but failed (HTTP/parse); optional debug hint */
   analysisError?: string;
   /** Optional — populated by `/api/hsp/create-order` on the client, not by analyze. */

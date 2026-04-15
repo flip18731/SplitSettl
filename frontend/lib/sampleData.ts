@@ -5,7 +5,7 @@ import type { AIAnalysisResult } from "./ai";
  * Used as fallback if the API call fails or takes too long.
  */
 export const SAMPLE_RESULT: AIAnalysisResult = {
-  repository: "anthropics/anthropic-sdk-python",
+  repository: "vercel/next.js",
   branch: "main",
   commitsAnalyzed: 18,
   aiSummary:
@@ -140,7 +140,7 @@ export const SAMPLE_RESULT: AIAnalysisResult = {
   ],
   invoice: {
     id: "INV-2026-4821",
-    project: "anthropics/anthropic-sdk-python",
+    project: "vercel/next.js",
     generatedAt: new Date().toISOString(),
     items: [
       {
