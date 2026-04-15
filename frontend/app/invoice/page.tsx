@@ -151,7 +151,8 @@ export default function InvoicePage() {
       };
 
       if (data.fallback || !res.ok) {
-        setHspError(data.message || data.error || "HSP gateway unavailable");
+        // API sends both: `error` (specific) and `message` (generic fallback copy)
+        setHspError(data.error || data.message || "HSP gateway unavailable");
         return;
       }
 

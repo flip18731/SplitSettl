@@ -6,7 +6,10 @@ export const runtime = "nodejs";
 const APP_SECRET = process.env.HSP_APP_SECRET?.trim() || "";
 
 /**
- * HashKey Merchant Gateway webhook — verifies `X-Signature` (t=…, v1=…) then accepts the event.
+ * HashKey Merchant webhook — HMAC over `timestamp + "." + rawBody` with `app_secret`.
+ * Supports:
+ * - All-in-One: `X-Signature: t=<unix>,v1=<hex>`
+ * - MultiPay guide: `X-Webhook-Timestamp` + `X-Webhook-Signature` (same message format)
  */
 export async function POST(req: NextRequest) {
   if (!APP_SECRET) {
@@ -20,7 +23,6 @@ export async function POST(req: NextRequest) {
   const sigHeader =
     req.headers.get("X-Signature") ||
     req.headers.get("x-signature") ||
-    req.headers.get("X-Webhook-Signature") ||
     "";
 
   let timestamp = "";
@@ -29,6 +31,29 @@ export async function POST(req: NextRequest) {
     const p = part.trim();
     if (p.startsWith("t=")) timestamp = p.slice(2);
     if (p.startsWith("v1=")) receivedSig = p.slice(3);
+  }
+
+  if (!timestamp || !receivedSig) {
+    const tsHdr =
+      req.headers.get("X-Webhook-Timestamp") ||
+      req.headers.get("x-webhook-timestamp") ||
+      "";
+    let whSig =
+      req.headers.get("X-Webhook-Signature") ||
+      req.headers.get("x-webhook-signature") ||
+      "";
+    if (tsHdr && whSig) {
+      timestamp = tsHdr.trim();
+      whSig = whSig.trim();
+      if (whSig.includes("v1=")) {
+        for (const part of whSig.split(",")) {
+          const p = part.trim();
+          if (p.startsWith("v1=")) receivedSig = p.slice(3);
+        }
+      } else {
+        receivedSig = whSig;
+      }
+    }
   }
 
   if (!timestamp || !receivedSig) {

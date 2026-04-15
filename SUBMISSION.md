@@ -1,37 +1,53 @@
-# HashKey On-Chain Horizon Hackathon — SplitSettl submission
+# HashKey On-Chain Horizon Hackathon — SplitSettl
 
-**Track:** PayFi (with AI for contribution analysis)  
-**Submission platform:** _[e.g. DoraHacks — add your project link]_  
-**Chain:** HashKey Chain (testnet 133 / mainnet 177)  
-**HSP:** On-chain lifecycle in `contracts/src/SplitSettl.sol` **+** optional HashKey Merchant API (`frontend/lib/hsp-client.ts`); official HSP user manual: [hashfans.io](https://hashfans.io/).
+## Track & scope
 
-## Live demo (Vercel)
+| Field | Value |
+|--------|--------|
+| **Track** | **PayFi** (AI-assisted contribution analysis + settlement) |
+| **Chain** | HashKey Chain — **Testnet 133** (primary demo) / Mainnet 177 |
+| **HSP** | **HashKey Merchant API** (`frontend/lib/hsp-client.ts`, `hsp-jwt.ts`, `/api/hsp/*`) **+** on-chain HSP lifecycle in `contracts/src/SplitSettl.sol` |
+| **Manual** | [hashfans.io](https://hashfans.io/) — HSP user documentation (navigation / PayFi) |
 
-Add your production deployment URL (Vercel → Domains):
+## Live demo (required for judges)
 
-**Live app:** _[https://your-project.vercel.app]_
+**Production URL (Vercel):** **[https://split-settl.vercel.app/](https://split-settl.vercel.app/)**
+
+Also set the same URL as **Website** on the GitHub repository (repo → **Settings** → General → **Website**).
 
 ## Demo video
 
-Add your recorded demo URL here before the deadline:
+**Link:** _[YouTube / Loom / Google Drive — public or unlisted]_
 
-**Video:** _[paste YouTube / Loom / Google Drive link]_
+Suggested flow: see `README.md` → **Demo Flow** (Dashboard → AI Invoice with a real repo → settlement / HSP checkout).
 
-Suggested flow (see also `README.md` → Demo Flow): Dashboard → AI Invoice (real GitHub repo) → on-chain settle (testnet MockUSDT) → explorer link.
+## Deployed contracts (HashKey testnet, chain 133)
 
-## Deployed contracts (fill in after deploy + verification)
+| Contract | Address | Explorer |
+|----------|---------|----------|
+| SplitSettl | `0x149e502b944413Eb868c1c52BE705BAA81aCC354` | [explorer.hsk.xyz](https://explorer.hsk.xyz/address/0x149e502b944413Eb868c1c52BE705BAA81aCC354) |
+| MockUSDT | `0x95173f1185d362eAA1856DcAc7d60292c589C4e9` | [explorer.hsk.xyz](https://explorer.hsk.xyz/address/0x95173f1185d362eAA1856DcAc7d60292c589C4e9) |
 
-| Network   | SplitSettl | MockUSDT (testnet) | Verified |
-|-----------|------------|--------------------|----------|
-| Testnet   |            |                    | [ ]      |
-| Mainnet   | optional   | n/a (use official USDT) | [ ] |
+_If you redeploy, replace both addresses here and in `README.md`._
 
-Explorer: [https://explorer.hsk.xyz](https://explorer.hsk.xyz)
+## Official HSP testnet tokens (reference)
 
-## Checklist
+| Token | Address |
+|-------|---------|
+| USDC | `0x79AEc4EeA31D50792F61D1Ca0733C18c89524C9e` |
+| USDT | `0x372325443233fEbaC1F6998aC750276468c83CC6` |
 
-- [ ] Repository public and builds (`frontend`: `npm run build`)
-- [ ] Contracts compile & tests pass (`contracts`: `npm run compile`, `npm run test`)
-- [ ] `.env.example` documents required variables
+## Submission platform
+
+**DoraHacks / other:** _[add your official hackathon project URL when available]_
+
+## Pre-flight checklist
+
+- [ ] GitHub **Description**, **Website** (Vercel), and **Topics** filled in (see `README.md` → GitHub repository settings)
+- [ ] Vercel env: `NEXT_PUBLIC_*`, `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, optional `HSP_*` merchant keys
+- [ ] `frontend` builds: `npm run build`
+- [ ] Contracts: `cd contracts && npm run compile`
 - [ ] Demo video link added above
-- [ ] At least one successful testnet settlement recorded (tx hash in README or here)
+- [ ] At least one successful testnet tx or HSP checkout path recorded (optional: paste tx hash below)
+
+**Example testnet tx (optional):** _[0x…]_

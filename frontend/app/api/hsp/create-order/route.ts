@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAddress, isAddress } from "ethers";
 import {
   buildCartMandateContents,
   getDefaultPayToAddress,
@@ -43,7 +44,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invoice required" }, { status: 400 });
   }
 
-  const payTo = (payToRaw || "").trim() || getDefaultPayToAddress();
+  const rawPay = (payToRaw || "").trim() || getDefaultPayToAddress();
+  const payTo =
+    rawPay && isAddress(rawPay)
+      ? getAddress(rawPay)
+      : rawPay;
   const isTestnet = process.env.NEXT_PUBLIC_CHAIN_ID !== "177";
   const coin: "USDC" | "USDT" = coinRaw === "USDT" ? "USDT" : "USDC";
 
@@ -56,7 +61,9 @@ export async function POST(req: NextRequest) {
   }));
 
   const paymentRequestId = `PAY-${invoice.id}`;
-  const amountStr = Number(invoice.total).toFixed(2);
+  /** Sum of line items must match `details.total` or HSP returns 10001. */
+  const lineSum = invoice.items.reduce((s, item) => s + Number(item.amount ?? 0), 0);
+  const amountStr = lineSum.toFixed(2);
 
   try {
     const contents = buildCartMandateContents({

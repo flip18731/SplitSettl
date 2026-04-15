@@ -1,8 +1,19 @@
+<p align="center">
+  <img src="docs/splitsettle-logo.png" alt="SplitSettl logo" width="200" />
+</p>
+
 # SplitSettl
 
 **AI-Powered Payment Splitting on HashKey Chain**
 
 > An AI agent that analyzes GitHub contributions, generates evidence-based invoices, and automatically splits payments to team members via HSP — fully on-chain on HashKey Chain.
+
+### Live demo · HashKey Chain testnet
+
+| | |
+|---|---|
+| **App (production)** | **[Open SplitSettl →](https://split-settl.vercel.app/)** — *set the same URL as **Website** in the GitHub repo settings so judges see it on the repo home page.* |
+| **Source** | [github.com/flip18731/SplitSettl](https://github.com/flip18731/SplitSettl) |
 
 ---
 
@@ -13,6 +24,8 @@ Freelancer teams working for DAOs get paid in lump sums. Splitting payments is m
 ## Solution
 
 SplitSettl uses Claude AI to analyze real GitHub commit data, measure each contributor's **impact** (not just volume), and generate transparent invoices with data-driven split ratios. Payments are split atomically on-chain via smart contracts on HashKey Chain. The full payment lifecycle — Request → Confirmation → Receipt — is recorded through HSP for an immutable audit trail.
+
+**HashKey Merchant (HSP gateway):** The invoice page can open a **real HashKey Merchant checkout** (`/api/hsp/create-order` → cart mandate, HMAC + ES256K JWT via `frontend/lib/hsp-client.ts` and `hsp-jwt.ts`). That is the **official PayFi HSP product integration**; credentials are server-side only (`HSP_APP_KEY`, `HSP_APP_SECRET`, `HSP_MERCHANT_PRIVATE_KEY`). On-chain, the contract still emits the same **HSPRequestCreated → HSPConfirmed → HSPReceiptGenerated** lifecycle for direct wallet settlement.
 
 ---
 
@@ -43,23 +56,30 @@ Smart Contracts (HashKey Chain)
 
 ---
 
-## Deployed Contracts
+## Deployed contracts (HashKey Chain)
 
-| Contract | Network | Address |
-|----------|---------|---------|
-| SplitSettl | HashKey Testnet (133) | _Deploy with `npm run deploy:testnet`_ |
-| MockUSDT | HashKey Testnet (133) | _Deploy with `npm run deploy:testnet`_ |
-| SplitSettl | HashKey Mainnet (177) | `cd contracts && npm run deploy:mainnet` |
+**Explorer (testnet):** [explorer.hsk.xyz](https://explorer.hsk.xyz)
 
-> Set `NEXT_PUBLIC_CONTRACT_ADDRESS` and `NEXT_PUBLIC_MOCK_USDT_ADDRESS` in `.env.local` after deployment.
+These addresses match the configured `NEXT_PUBLIC_*` deployment used for demos. After you redeploy, update this table and `frontend/.env.local` / Vercel env vars.
+
+| Contract | Network | Address | Explorer |
+|----------|---------|---------|----------|
+| **SplitSettl** | HashKey Testnet (chain **133**) | `0x149e502b944413Eb868c1c52BE705BAA81aCC354` | [View on explorer](https://explorer.hsk.xyz/address/0x149e502b944413Eb868c1c52BE705BAA81aCC354) |
+| **MockUSDT** (demo ERC20) | HashKey Testnet (133) | `0x95173f1185d362eAA1856DcAc7d60292c589C4e9` | [View on explorer](https://explorer.hsk.xyz/address/0x95173f1185d362eAA1856DcAc7d60292c589C4e9) |
+| SplitSettl | HashKey Mainnet (177) | *Deploy with `cd contracts && npm run deploy:mainnet`* | — |
+
+> **Local / Vercel:** set `NEXT_PUBLIC_CONTRACT_ADDRESS` and `NEXT_PUBLIC_MOCK_USDT_ADDRESS` to the rows above (testnet). Re-run `npm run deploy:testnet` from `contracts/` if you need a fresh deployment, then paste the new addresses here.
 
 ---
 
 ## How HSP is Used
 
-**Official reference:** The PayFi track expects use of **HSP** as documented by HashKey — see the **HSP user manual** from the top navigation on [hashfans.io](https://hashfans.io/). That document describes the settlement *message* model (request / confirmation / receipt) that SplitSettl mirrors on-chain.
+**Official reference:** The PayFi track expects use of **HSP** as documented by HashKey — see the **HSP user manual** from the top navigation on [hashfans.io](https://hashfans.io/).
 
-SplitSettl implements an **HSP-shaped lifecycle** in `SplitSettl.sol` for every **ERC20** payment (`submitPaymentERC20`): all three lifecycle stages are recorded **atomically in one transaction**:
+**Two layers:**
+
+1. **HashKey Merchant API (PayFi checkout)** — Server routes create a **cart mandate** and return a **payment URL** (`/api/hsp/create-order`, signed with your app key + merchant JWT). This is the productized HSP payment flow from the Merchant dashboard.
+2. **On-chain HSP lifecycle (audit / direct settlement)** — `SplitSettl.sol` implements the **request → confirmation → receipt** stages for **ERC20** payments (`submitPaymentERC20`): all three stages are recorded **atomically in one transaction**:
 
 ### 3-Stage HSP Lifecycle
 
@@ -91,9 +111,19 @@ All HSP message IDs are stored per-project (`projectHSPMessageIds` mapping) for 
 | USDC | `0x054ed45810DbBAb8B27668922D110669c9D88D0a` |
 
 ### HashKey Chain Testnet (Chain ID: 133)
+
+Official **HSP / x402** token addresses (same as Merchant API chain-config; use for checkout and on-chain demos):
+
 | Token | Address |
 |-------|---------|
-| MockUSDT | Set via `NEXT_PUBLIC_MOCK_USDT_ADDRESS` after deploy |
+| **USDC** | `0x79AEc4EeA31D50792F61D1Ca0733C18c89524C9e` |
+| **USDT** | `0x372325443233fEbaC1F6998aC750276468c83CC6` |
+
+Local **MockUSDT** (deployed with this repo for minting in demos):
+
+| Token | Address |
+|-------|---------|
+| MockUSDT | `0x95173f1185d362eAA1856DcAc7d60292c589C4e9` *(see Deployed contracts table)* |
 
 Switch networks by setting `NEXT_PUBLIC_CHAIN_ID=177` (mainnet) or `133` (testnet).
 
@@ -157,8 +187,8 @@ The invoice page features a cinematic 5-phase animated analysis:
 | Smart Contracts | Solidity 0.8.19, Hardhat |
 | Frontend | Next.js 14, TypeScript, Tailwind CSS |
 | AI Engine | Anthropic Claude API (`claude-sonnet-4-20250514`) |
-| Settlement | HSP (HashKey Settlement Protocol) — 3-stage on-chain lifecycle |
-| Stablecoins | USDT / USDC (mainnet), MockUSDT (testnet) |
+| Settlement | HSP — HashKey Merchant API (`hsp-client.ts`) + 3-stage on-chain lifecycle in `SplitSettl.sol` |
+| Stablecoins | USDT / USDC (mainnet); USDT / USDC + MockUSDT (testnet) |
 | Wallet | MetaMask, ethers.js v6 |
 
 ---
@@ -254,6 +284,16 @@ Return to Dashboard. Show the new payment in the live feed. "The full HSP lifecy
 
 ---
 
+## GitHub repository settings (visibility for judges)
+
+GitHub does not read these from the repo files — set them once in the repo **Settings**:
+
+- **Description:** e.g. `SplitSettl — AI invoices & payment splits on HashKey Chain (PayFi + HSP).`
+- **Website:** your **Vercel production URL** (same as **Live demo** above).
+- **Topics:** `hashkey-chain`, `hashkey`, `payfi`, `hsp`, `web3`, `solidity`, `nextjs`, `claude`, `defi`
+
+---
+
 ## Hackathon Submission
 
 **Event:** HashKey Chain On-Chain Horizon Hackathon  
@@ -264,8 +304,8 @@ Use **`SUBMISSION.md`** for demo video link, deployed addresses, and a short pre
 
 ### Compliance Checklist
 
-- [x] Deployed on HashKey Chain (OP Stack L2)
-- [x] HSP integration with 3-stage message lifecycle (Request → Confirmation → Receipt)
+- [x] Deployed on HashKey Chain testnet — **contract addresses + explorer links** in [Deployed contracts](#deployed-contracts-hashkey-chain) (update if you redeploy)
+- [x] HSP: **Merchant API** (checkout) **+** 3-stage on-chain lifecycle (Request → Confirmation → Receipt)
 - [x] All HSP message IDs stored on-chain per project
 - [x] USDT/USDC support (official mainnet token addresses)
 - [x] MockUSDT for testnet demos

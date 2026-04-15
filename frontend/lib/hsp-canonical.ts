@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-/** RFC 8785–style key sorting for canonical JSON (HSP HMAC + cart hash). */
+/** Canonical JSON for HSP HMAC body hash + JWT `cart_hash` — matches Merchant “All-in-One” pseudocode (sorted keys + compact JSON.stringify). */
 export function sortKeys(val: unknown): unknown {
   if (val === null || typeof val !== "object") return val;
   if (Array.isArray(val)) return val.map(sortKeys);

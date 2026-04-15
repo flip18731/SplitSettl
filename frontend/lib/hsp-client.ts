@@ -1,6 +1,18 @@
 import crypto from "crypto";
+import { getAddress, isAddress } from "ethers";
 import { canonicalJSON } from "./hsp-canonical";
 import { CONTRACT_ADDRESS } from "./contract";
+
+/** EIP-55 checksum for addresses the HSP gateway validates strictly. */
+function checksumAddr(addr: string): string {
+  const t = addr.trim();
+  if (!t || !isAddress(t)) return t;
+  try {
+    return getAddress(t);
+  } catch {
+    return t;
+  }
+}
 
 const HSP_BASE =
   process.env.HSP_API_BASE?.replace(/\/$/, "") ||
@@ -76,15 +88,9 @@ function toPublicApiPath(merchantPath: string): string {
     .replace("/api/v1/merchant/payments", "/api/v1/public/payment");
 }
 
-function shouldRetryAlternatePath(
-  res: Response,
-  data: unknown
-): boolean {
-  if (res.status === 404) return true;
-  if (!data || typeof data !== "object") return false;
-  const r = data as Record<string, unknown>;
-  if ("code" in r && r.code !== 0 && r.code !== undefined) return true;
-  return false;
+/** Only retry the `/public/...` mirror when the merchant route is missing (HTTP 404). */
+function shouldRetryAlternatePath(res: Response): boolean {
+  return res.status === 404;
 }
 
 async function hspFetchOnce(
@@ -133,7 +139,7 @@ export async function hspFetch(
 
   let { res, data, text } = await hspFetchOnce(method, path, query, body);
 
-  if (path.includes("/merchant/") && shouldRetryAlternatePath(res, data)) {
+  if (path.includes("/merchant/") && shouldRetryAlternatePath(res)) {
     const altPath = toPublicApiPath(path);
     if (altPath !== path) {
       const second = await hspFetchOnce(method, altPath, query, body);
@@ -167,7 +173,8 @@ export type BuildCartParams = {
 
 /** Build `cart_mandate.contents` — must match what you sign in `createMerchantJWT`. */
 export function buildCartMandateContents(params: BuildCartParams): Record<string, unknown> {
-  const network = params.isTestnet ? "hashkey-testnet" : "hashkey";
+  /** Chain-config `name` for HashKey Chain testnet (see Merchant API chain-config / docs). */
+  const network = params.isTestnet ? "hashkeytestnet" : "hashkey";
   const chainId = params.isTestnet ? 133 : 177;
   const tokens = params.isTestnet ? HSP_TOKENS.testnet : HSP_TOKENS.mainnet;
   const token = tokens[params.coin];
@@ -183,8 +190,8 @@ export function buildCartMandateContents(params: BuildCartParams): Record<string
             x402Version: 2,
             network,
             chain_id: chainId,
-            contract_address: token.address,
-            pay_to: params.payTo,
+            contract_address: checksumAddr(token.address),
+            pay_to: checksumAddr(params.payTo),
             coin: params.coin,
           },
         },
