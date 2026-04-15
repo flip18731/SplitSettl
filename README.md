@@ -138,6 +138,8 @@ Official PayFi reference: **HSP user manual** via [hashfans.io](https://hashfans
 **Layer 1 — HashKey Merchant (checkout)**  
 Server creates a **cart mandate** and returns a **payment URL** (`/api/hsp/create-order`). Credentials stay server-only: `HSP_APP_KEY`, `HSP_APP_SECRET`, `HSP_MERCHANT_PRIVATE_KEY`.
 
+**x402 payload:** By default the client sends **CAIP-2** network ids (`eip155:133` / `eip155:177`) per [x402 network identifiers](https://docs.x402.org/core-concepts/network-and-token-support). If QA still expects HashKey-specific strings, set `HSP_X402_USE_LEGACY_NETWORK=1` or `HSP_X402_NETWORK_TESTNET` — see `.env.example`.
+
 **Layer 2 — On-chain (audit / direct settlement)**  
 `submitPaymentERC20` runs the full lifecycle in **one transaction**:
 

@@ -197,11 +197,30 @@ export type BuildCartParams = {
 /** Build `cart_mandate.contents` — must match what you sign in `createMerchantJWT`. */
 export function buildCartMandateContents(params: BuildCartParams): Record<string, unknown> {
   /**
-   * Must match Merchant API / chain-config (same as `frontend/lib/chains.ts` `network`).
-   * `hashkeytestnet` (no hyphen) causes gateway `10001` on QA for some builds.
+   * x402 v2 uses CAIP-2 network ids (`eip155:<chainId>`) per https://docs.x402.org/ — many gateways
+   * reject legacy strings like `hashkey-testnet` with 10001.
+   * Override: `HSP_X402_NETWORK_TESTNET` / `HSP_X402_NETWORK_MAINNET`, or `HSP_X402_USE_LEGACY_NETWORK=1`
+   * for previous HashKey-specific strings.
    */
-  const network = params.isTestnet ? "hashkey-testnet" : "hashkey";
   const chainId = params.isTestnet ? 133 : 177;
+  const envNet = params.isTestnet
+    ? process.env.HSP_X402_NETWORK_TESTNET?.trim()
+    : process.env.HSP_X402_NETWORK_MAINNET?.trim();
+  const legacy =
+    process.env.HSP_X402_USE_LEGACY_NETWORK === "1" ||
+    process.env.HSP_X402_USE_LEGACY_NETWORK === "true";
+  const network =
+    envNet ||
+    (legacy
+      ? params.isTestnet
+        ? "hashkey-testnet"
+        : "hashkey"
+      : `eip155:${chainId}`);
+  /** Some validators expect JSON string (x402 v2 examples); set `HSP_CHAIN_ID_JSON_TYPE=string`. */
+  const chainIdJson: string | number =
+    process.env.HSP_CHAIN_ID_JSON_TYPE?.toLowerCase() === "string"
+      ? String(chainId)
+      : chainId;
   const netKey = params.isTestnet ? "testnet" : "mainnet";
   const tokenAddr = resolveTokenContractAddress(netKey, params.coin);
 
@@ -215,7 +234,7 @@ export function buildCartMandateContents(params: BuildCartParams): Record<string
           data: {
             x402Version: 2,
             network,
-            chain_id: chainId,
+            chain_id: chainIdJson,
             contract_address: checksumAddr(tokenAddr),
             pay_to: checksumAddr(params.payTo),
             coin: params.coin,

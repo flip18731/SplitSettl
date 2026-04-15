@@ -7,7 +7,8 @@ import {
   submitCartMandate,
   type HspDisplayItem,
 } from "@/lib/hsp-client";
-import { createMerchantJWT } from "@/lib/hsp-jwt";
+import { canonicalJSON } from "@/lib/hsp-canonical";
+import { assertJwtCartHashMatches, createMerchantJWT } from "@/lib/hsp-jwt";
 import type { AIInvoice } from "@/lib/ai";
 import { displayFirstName } from "@/lib/format";
 
@@ -71,7 +72,7 @@ function buildReconciledDisplay(
 }
 
 type Body = {
-  invoice: AIInvoice;
+  invoice?: AIInvoice;
   payTo?: string;
   coin?: "USDC" | "USDT";
 };
@@ -97,7 +98,11 @@ export async function POST(req: NextRequest) {
   }
 
   const { invoice, payTo: payToRaw, coin: coinRaw } = body;
-  if (!invoice?.id || !Array.isArray(invoice.items)) {
+  const minimalCart =
+    process.env.HSP_MINIMAL_CART === "1" ||
+    process.env.HSP_MINIMAL_CART === "true";
+
+  if (!minimalCart && (!invoice?.id || !Array.isArray(invoice.items))) {
     return NextResponse.json({ error: "invoice required" }, { status: 400 });
   }
 
@@ -126,23 +131,47 @@ export async function POST(req: NextRequest) {
     coin = envCoin;
   }
 
-  /** Same currency on every line + total — mixed USD/USDT caused HSP 10001. */
-  const displayCurrency = (invoice.currency || "USD").trim() || "USD";
+  /**
+   * HSP validates `payment_request.details` amounts against x402 `method_data.data.coin`.
+   * Using invoice fiat labels (e.g. "USD") while `coin` is USDC/USDT often yields 10001.
+   */
+  const displayCurrency = coin;
 
-  const reconciled = buildReconciledDisplay(invoice, displayCurrency);
-  if ("error" in reconciled) {
-    return NextResponse.json(
-      { error: reconciled.error, fallback: true },
-      { status: 400 }
-    );
+  let displayItems: HspDisplayItem[];
+  let amountStr: string;
+  let invoiceIdForCart: string;
+  let paymentRequestId: string;
+
+  if (minimalCart) {
+    invoiceIdForCart = "hsp-minimal-smoke";
+    paymentRequestId = "PAY-hsp-minimal-smoke";
+    amountStr = "1.00";
+    displayItems = [
+      {
+        label: "Minimal smoke test",
+        amount: { currency: displayCurrency, value: "1.00" },
+      },
+    ];
+  } else {
+    if (!invoice?.id || !Array.isArray(invoice.items)) {
+      return NextResponse.json({ error: "invoice required" }, { status: 400 });
+    }
+    const reconciled = buildReconciledDisplay(invoice, displayCurrency);
+    if ("error" in reconciled) {
+      return NextResponse.json(
+        { error: reconciled.error, fallback: true },
+        { status: 400 }
+      );
+    }
+    displayItems = reconciled.displayItems;
+    amountStr = reconciled.amountStr;
+    invoiceIdForCart = invoice.id;
+    paymentRequestId = `PAY-${invoice.id}`;
   }
-  const { displayItems, amountStr } = reconciled;
-
-  const paymentRequestId = `PAY-${invoice.id}`;
 
   try {
     const contents = buildCartMandateContents({
-      invoiceId: invoice.id,
+      invoiceId: invoiceIdForCart,
       paymentRequestId,
       amount: amountStr,
       displayCurrency,
@@ -152,7 +181,21 @@ export async function POST(req: NextRequest) {
       isTestnet,
     });
 
+    for (const row of displayItems) {
+      if (typeof row.amount?.value !== "string") {
+        throw new Error("HSP display amount.value must be a string");
+      }
+    }
+    if (typeof amountStr !== "string" || !/^\d+\.\d{2}$/.test(amountStr)) {
+      throw new Error("HSP total amount must be a two-decimal string");
+    }
+
+    if (process.env.HSP_DEBUG === "1") {
+      console.log("[HSP_DEBUG] canonical(contents) prefix:", canonicalJSON(contents).slice(0, 900));
+    }
+
     const merchantJWT = await createMerchantJWT(contents);
+    assertJwtCartHashMatches(contents, merchantJWT);
 
     const result = (await submitCartMandate({
       contents,
@@ -182,7 +225,7 @@ export async function POST(req: NextRequest) {
       paymentUrl,
       paymentRequestId: data.payment_request_id ?? data.paymentRequestId,
       multiPay: data.multi_pay,
-      cartMandateId: (data.cart_mandate_id as string) || invoice.id,
+      cartMandateId: (data.cart_mandate_id as string) || invoiceIdForCart,
       flowId: data.flow_id,
       raw: result,
     });

@@ -21,6 +21,29 @@ async function loadSigningKey() {
  * ES256K JWT for `merchant_authorization`.
  * `cart_hash` = SHA-256 (hex) over canonical JSON of cart `contents` (must match request body).
  */
+/** Decode JWT payload (no verify) — debug / invariant checks only. */
+export function decodeMerchantJwtPayload(jwt: string): { cart_hash?: string } {
+  const parts = jwt.split(".");
+  if (parts.length < 2) return {};
+  const json = Buffer.from(parts[1]!, "base64url").toString("utf8");
+  return JSON.parse(json) as { cart_hash?: string };
+}
+
+/** Ensures `cart_hash` in JWT matches SHA256(canonicalJSON(contents)). */
+export function assertJwtCartHashMatches(
+  contents: Record<string, unknown>,
+  jwt: string
+): void {
+  const canonical = canonicalJSON(contents);
+  const expected = sha256hex(canonical);
+  const payload = decodeMerchantJwtPayload(jwt);
+  if (payload.cart_hash !== expected) {
+    throw new Error(
+      `HSP internal: cart_hash mismatch (jwt vs contents). Expected ${expected.slice(0, 16)}…`
+    );
+  }
+}
+
 export async function createMerchantJWT(
   cartContents: Record<string, unknown>
 ): Promise<string> {
