@@ -4,6 +4,8 @@
 
 <h1 align="center">SplitSettl</h1>
 
+<h2 align="center"><a href="https://split-settl.vercel.app/">https://split-settl.vercel.app/</a></h2>
+
 <p align="center"><strong>AI-powered payment splitting on HashKey Chain</strong></p>
 
 <p align="center">
