@@ -24,14 +24,22 @@ Frontend (Next.js)
 ├── Projects       Project list + detail with team splits and payment history
 ├── Invoices       AI invoice generator + wallet settlement (`createProject` + `submitPaymentERC20`)
 └── API Routes
-    ├── /api/ai/analyze     Claude API for real GitHub contribution analysis
-    └── /api/hsp/status     Optional demo store (canonical state: contract + explorer)
+    ├── /api/ai/analyze       GitHub commits + LLM analysis (OpenAI/Anthropic)
+    ├── /api/hsp/create-order HashKey Merchant cart mandate (HMAC + ES256K JWT)
+    ├── /api/hsp/status       Server-side payment lookup
+    └── /api/hsp/webhook      Gateway payment callbacks (signature-verified)
 
 Smart Contracts (HashKey Chain)
-├── SplitSettl.sol    Project registry, atomic payment splitting, full HSP lifecycle
-├── MockUSDT.sol      ERC20 test token for testnet demos (6 decimals, free mint)
-└── Scripts           Deploy + seed with pre-populated demo data
+├── contracts/src/SplitSettl.sol   Project registry, atomic payment splitting, full HSP lifecycle
+├── contracts/src/MockUSDT.sol    ERC20 test token for testnet demos (6 decimals, public mint)
+└── contracts/scripts              Deploy + seed with pre-populated demo data
 ```
+
+### Vercel
+
+- **Install / build:** Repo root runs `npm install` (workspaces) and `npm run build` → `cd frontend && npm run build`.
+- **Alternative:** Set the Vercel project **Root Directory** to `frontend` and use default **Next.js** install/build (then remove or ignore root `vercel.json` overrides if they conflict).
+- Set all **`NEXT_PUBLIC_*`** and server secrets (`ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, optional `HSP_*`) in the Vercel project **Environment Variables**.
 
 ---
 

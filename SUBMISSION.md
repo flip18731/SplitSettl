@@ -1,8 +1,15 @@
 # HashKey On-Chain Horizon Hackathon — SplitSettl submission
 
 **Track:** PayFi (with AI for contribution analysis)  
+**Submission platform:** _[e.g. DoraHacks — add your project link]_  
 **Chain:** HashKey Chain (testnet 133 / mainnet 177)  
-**HSP:** On-chain lifecycle in `contracts/src/SplitSettl.sol`; see [hashfans.io](https://hashfans.io/) for the official HSP user manual (PayFi requirement).
+**HSP:** On-chain lifecycle in `contracts/src/SplitSettl.sol` **+** optional HashKey Merchant API (`frontend/lib/hsp-client.ts`); official HSP user manual: [hashfans.io](https://hashfans.io/).
+
+## Live demo (Vercel)
+
+Add your production deployment URL (Vercel → Domains):
+
+**Live app:** _[https://your-project.vercel.app]_
 
 ## Demo video
 
