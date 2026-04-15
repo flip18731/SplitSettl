@@ -1,89 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isHSPConfigured, queryPayment, queryPaymentByFlow } from "@/lib/hsp-client";
+
+export const runtime = "nodejs";
 
 /**
- * Optional in-memory HSP status store (demo / legacy).
- *
- * **Production / hackathon demo:** Prefer reading HSP state from the deployed
- * `SplitSettl` contract (`getHSPStatus`, events) or from the invoice
- * settlement transaction. This route remains for local experiments only.
+ * Server-side HSP payment lookup (HMAC — secrets stay on server).
  */
-
-interface HSPRecord {
-  requestId: string;
-  projectId: number;
-  amount: number;
-  currency: string;
-  status: "requested" | "confirmed" | "receipt";
-  requestedAt: string;
-  confirmedAt?: string;
-  receiptAt?: string;
-  txHash?: string;
-}
-
-// In-memory store for demo
-const hspRecords = new Map<string, HSPRecord>();
-
 export async function GET(req: NextRequest) {
-  const requestId = req.nextUrl.searchParams.get("requestId");
-
-  if (requestId) {
-    const record = hspRecords.get(requestId);
-    if (!record) {
-      return NextResponse.json({ error: "HSP request not found" }, { status: 404 });
-    }
-    return NextResponse.json(record);
+  if (!isHSPConfigured()) {
+    return NextResponse.json(
+      { error: "HSP_APP_KEY / HSP_APP_SECRET not configured" },
+      { status: 503 }
+    );
   }
 
-  // Return all records
-  return NextResponse.json(Array.from(hspRecords.values()));
-}
+  const { searchParams } = new URL(req.url);
+  const cartMandateId = searchParams.get("cart_mandate_id")?.trim();
+  const flowId = searchParams.get("flow_id")?.trim();
 
-export async function POST(req: NextRequest) {
+  if (!cartMandateId && !flowId) {
+    return NextResponse.json(
+      { error: "Provide cart_mandate_id or flow_id" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const body = await req.json();
-    const { action, requestId, projectId, amount, currency, txHash } = body;
-
-    switch (action) {
-      case "create": {
-        const id = requestId || `HSP-REQ-${Date.now()}`;
-        const record: HSPRecord = {
-          requestId: id,
-          projectId: projectId || 0,
-          amount: amount || 0,
-          currency: currency || "USDT",
-          status: "requested",
-          requestedAt: new Date().toISOString(),
-        };
-        hspRecords.set(id, record);
-        return NextResponse.json(record, { status: 201 });
-      }
-
-      case "confirm": {
-        const record = hspRecords.get(requestId);
-        if (!record) {
-          return NextResponse.json({ error: "Request not found" }, { status: 404 });
-        }
-        record.status = "confirmed";
-        record.confirmedAt = new Date().toISOString();
-        record.txHash = txHash;
-        return NextResponse.json(record);
-      }
-
-      case "receipt": {
-        const record = hspRecords.get(requestId);
-        if (!record) {
-          return NextResponse.json({ error: "Request not found" }, { status: 404 });
-        }
-        record.status = "receipt";
-        record.receiptAt = new Date().toISOString();
-        return NextResponse.json(record);
-      }
-
-      default:
-        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-    }
-  } catch (error) {
-    console.error("HSP status error:", error);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    const data = cartMandateId
+      ? await queryPayment(cartMandateId)
+      : await queryPaymentByFlow(flowId!);
+    return NextResponse.json(data);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: msg }, { status: 502 });
   }
 }

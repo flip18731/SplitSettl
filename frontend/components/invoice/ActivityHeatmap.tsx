@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { VisualizationData } from "@/lib/ai";
+import { displayFirstName } from "@/lib/format";
 
 interface Props {
   data: VisualizationData;
@@ -43,7 +44,7 @@ export default function ActivityHeatmap({ data }: Props) {
         {contributors.map((contributor) => (
           <div key={contributor.name} className="flex items-center gap-3">
             <span className="text-[11px] text-text-secondary w-20 text-right truncate flex-shrink-0">
-              {contributor.name.split(" ")[0]}
+              {displayFirstName(contributor.name)}
             </span>
             <div className="flex gap-[2px] flex-1">
               {days.map((day) => {

@@ -11,6 +11,9 @@ typechain-types/
 .env.local
 .env.*.local
 
+# HSP merchant keys (keep local)
+merchant_*.pem
+
 *.log
 .DS_Store
 *.tsbuildinfo

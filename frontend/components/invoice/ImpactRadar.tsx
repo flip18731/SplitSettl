@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { AISplit } from "@/lib/ai";
+import { displayFirstName } from "@/lib/format";
 
 const RANK_COLORS = ["#2DD4A8", "#F59E42", "#8B93A8", "rgba(45,212,168,0.5)", "#5A6275"];
 
@@ -64,7 +65,7 @@ function useAnimatedProgress(duration: number, staggerMs: number) {
 }
 
 export default function ImpactRadar({ splits, aiSummary, onComplete }: Props) {
-  const { getAxisProgress } = useAnimatedProgress(2000, 200);
+  const { getAxisProgress } = useAnimatedProgress(2800, 220);
   const [typedChars, setTypedChars] = useState(0);
   const [showScores, setShowScores] = useState(false);
   const completeFired = useRef(false);
@@ -74,7 +75,7 @@ export default function ImpactRadar({ splits, aiSummary, onComplete }: Props) {
 
   // Show scores after radar animation
   useEffect(() => {
-    const t = setTimeout(() => setShowScores(true), 2500);
+    const t = setTimeout(() => setShowScores(true), 3800);
     return () => clearTimeout(t);
   }, []);
 
@@ -100,7 +101,7 @@ export default function ImpactRadar({ splits, aiSummary, onComplete }: Props) {
         completeFired.current = true;
         onComplete();
       }
-    }, 5000);
+    }, 8500);
     return () => clearTimeout(timer);
   }, [onComplete]);
 
@@ -144,7 +145,7 @@ export default function ImpactRadar({ splits, aiSummary, onComplete }: Props) {
             >
               {/* Name */}
               <p className="text-[13px] font-semibold text-text-primary text-center mb-1">
-                {split.name.split(" ")[0]}
+                {displayFirstName(split.name)}
               </p>
               <p className="text-[10px] text-text-tertiary text-center mb-2">
                 {split.percentage}% split

@@ -14,6 +14,7 @@ import { splitsToBasisPoints } from "@/lib/splits";
 import { connectWallet, switchToHashKeyChain } from "@/lib/wallet";
 import { explorerTxUrl } from "@/lib/explorer";
 import WalletAddressProvenance from "./shared/WalletAddressProvenance";
+import { displayFirstName } from "@/lib/format";
 
 const ZERO = ethers.ZeroAddress;
 
@@ -65,7 +66,7 @@ export default function OnChainSettlement({ result, onComplete }: Props) {
       const raw = addressByName[s.name]?.trim() ?? "";
       if (!raw || !ethers.isAddress(raw)) {
         setError(
-          `Add a valid 0x address for “${s.name}” (e.g. via .splitsettle.json in the repo).`
+          `Add a valid 0x address for “${displayFirstName(s.name)}” (e.g. via .splitsettle.json in the repo).`
         );
         return;
       }
@@ -179,7 +180,7 @@ export default function OnChainSettlement({ result, onComplete }: Props) {
             className="flex flex-col sm:flex-row sm:items-start gap-2 text-[12px]"
           >
             <span className="text-text-secondary w-32 shrink-0 sm:pt-2">
-              {s.name}{" "}
+              {displayFirstName(s.name)}{" "}
               <span className="text-text-tertiary">({s.percentage}%)</span>
             </span>
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">

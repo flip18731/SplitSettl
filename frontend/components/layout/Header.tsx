@@ -8,6 +8,7 @@ const navItems = [
   { href: "/", label: "Dashboard" },
   { href: "/projects", label: "Projects" },
   { href: "/invoice", label: "Invoices" },
+  { href: "/hsp-status", label: "HSP" },
 ];
 
 export default function Header() {

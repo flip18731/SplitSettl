@@ -1,6 +1,7 @@
 "use client";
 
 import type { VisualizationData } from "@/lib/ai";
+import { displayFirstName } from "@/lib/format";
 
 const EXT_COLORS: Record<string, string> = {
   sol: "#2DD4A8",
@@ -44,7 +45,7 @@ export default function FileTypeBreakdown({ data }: Props) {
             <div key={contributor.name}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[12px] font-medium text-text-primary">
-                  {contributor.name.split(" ")[0]}
+                  {displayFirstName(contributor.name)}
                 </span>
                 <span className="text-[10px] text-text-tertiary">
                   {contributor.filesChanged} files

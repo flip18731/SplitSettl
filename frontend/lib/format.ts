@@ -8,3 +8,11 @@ export function formatNumberEnUS(
 ): string {
   return n.toLocaleString("en-US", options);
 }
+
+/** First whitespace-delimited token — compact contributor labels (e.g. demo / invoice UI). */
+export function displayFirstName(name: string): string {
+  const t = name.trim();
+  if (!t) return name;
+  const first = t.split(/\s+/)[0];
+  return first ?? t;
+}

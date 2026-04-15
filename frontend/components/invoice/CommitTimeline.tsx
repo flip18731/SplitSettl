@@ -10,6 +10,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import type { VisualizationData } from "@/lib/ai";
+import { displayFirstName } from "@/lib/format";
 
 const AUTHOR_COLORS = ["#2DD4A8", "#F59E42", "#8B93A8", "rgba(45,212,168,0.5)"];
 
@@ -109,7 +110,9 @@ export default function CommitTimeline({ data }: Props) {
         {byAuthor.map((g) => (
           <div key={g.name} className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full" style={{ background: g.color }} />
-            <span className="text-[11px] text-text-secondary">{g.name}</span>
+            <span className="text-[11px] text-text-secondary">
+              {displayFirstName(g.name)}
+            </span>
           </div>
         ))}
       </div>

@@ -2,7 +2,7 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import type { VisualizationData } from "@/lib/ai";
-import { formatNumberEnUS } from "@/lib/format";
+import { displayFirstName, formatNumberEnUS } from "@/lib/format";
 
 const COLORS = ["#2DD4A8", "#F59E42", "#8B93A8", "rgba(45,212,168,0.5)"];
 
@@ -17,7 +17,7 @@ export default function CodeImpactRing({ data }: Props) {
   );
 
   const pieData = data.contributors.map((c) => ({
-    name: c.name,
+    name: displayFirstName(c.name),
     value: c.additions + c.deletions,
   }));
 
@@ -75,7 +75,7 @@ export default function CodeImpactRing({ data }: Props) {
         {pieData.map((d, i) => (
           <div key={d.name} className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
-            <span className="text-[11px] text-text-secondary">{d.name.split(" ")[0]}</span>
+            <span className="text-[11px] text-text-secondary">{d.name}</span>
           </div>
         ))}
       </div>

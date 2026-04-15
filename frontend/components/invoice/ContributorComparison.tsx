@@ -10,7 +10,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import type { VisualizationData } from "@/lib/ai";
-import { formatNumberEnUS } from "@/lib/format";
+import { displayFirstName, formatNumberEnUS } from "@/lib/format";
 
 interface Props {
   data: VisualizationData;
@@ -18,8 +18,7 @@ interface Props {
 
 export default function ContributorComparison({ data }: Props) {
   const chartData = data.contributors.map((c) => ({
-    name: c.name.split(" ")[0], // First name for labels
-    fullName: c.name,
+    name: displayFirstName(c.name),
     commits: c.commits,
     additions: c.additions,
     deletions: c.deletions,
@@ -47,7 +46,7 @@ export default function ContributorComparison({ data }: Props) {
               const d = payload[0]?.payload;
               return (
                 <div className="bg-bg-surface border border-border rounded-lg px-3 py-2">
-                  <p className="text-[12px] font-semibold text-text-primary">{d.fullName}</p>
+                  <p className="text-[12px] font-semibold text-text-primary">{d.name}</p>
                   <p className="text-[11px] text-text-secondary mt-1">
                     {d.commits} commits · +{formatNumberEnUS(d.additions)} / -{formatNumberEnUS(d.deletions)}
                   </p>

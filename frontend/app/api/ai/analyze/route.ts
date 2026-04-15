@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAddress, isAddress } from "ethers";
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+/** Trim so accidental whitespace in .env does not break the key */
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY?.trim() || "";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY?.trim() || "";
+/** Default cost-efficient model; override with OPENAI_MODEL=gpt-4o etc. */
+const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 interface CommitData {
@@ -301,6 +305,106 @@ function computeImpactRating(scores: {
   return "LOW";
 }
 
+type LlmProviderName = "openai" | "anthropic";
+
+function buildAnalysisLlmPrompts(
+  owner: string,
+  repo: string,
+  branch: string,
+  humanCommitCount: number,
+  context: string,
+  totalBudget: number
+): { system: string; user: string } {
+  const invExample = Math.floor(Math.random() * 9000 + 1000);
+  const system = `You are the AI payment agent for SplitSettl on HashKey Chain. You analyze REAL GitHub commits with actual code diffs to determine fair payment splits based on IMPACT, not just quantity.
+
+The commit list you receive EXCLUDES bots, CI accounts, dependency bots (Dependabot/Renovate/etc.), and typical automated/AI commit identities — only human contributors are in scope for payment.
+
+CRITICAL SCORING PHILOSOPHY:
+- A contributor with 5 high-complexity commits (new smart contract, security fix, core algorithm) should receive MORE than someone with 20 low-complexity commits (documentation edits, config changes, formatting fixes)
+- Quality of code matters more than quantity of commits
+- New feature implementation is weighted highest
+- Security-related changes are weighted very high
+- Smart contract code (.sol files) is weighted higher than frontend or config
+- Test code is valuable but weighted less than the code it tests
+- Documentation is valuable but weighted least
+
+For each contributor, evaluate 5 dimensions on a 0-100 scale:
+- complexity: How technically complex is their code? (algorithms, smart contracts = high; config, docs = low)
+- featureImpact: Did they build new capabilities or make minor tweaks? (new features, critical fixes = high; typos, formatting = low)
+- scopeBreadth: How many different areas of the codebase did they affect? (many modules = high; single file = low)
+- consistency: Was their work spread over time or one big dump? (steady cadence = high; single burst = low)
+- volume: Raw output quantity (highest commit count and lines = high, BUT this dimension matters LEAST)
+
+Assign an overall impactRating: "HIGH", "MEDIUM", or "LOW".
+
+For each contributor, cite 1-2 specific commits (by SHA) as key evidence for your assessment.
+
+The percentage splits MUST sum to exactly 100. The total budget is $${totalBudget}.
+
+Respond ONLY with valid JSON. No markdown, no backticks, no preamble.`;
+
+  const user = `Analyze real contributions for ${owner}/${repo} (branch: ${branch}) and generate a payment split:
+
+${context}
+
+Return this exact JSON structure:
+{
+  "repository": "${owner}/${repo}",
+  "branch": "${branch}",
+  "commitsAnalyzed": ${humanCommitCount},
+  "splits": [
+    {
+      "name": "author name",
+      "percentage": 40,
+      "impactRating": "HIGH",
+      "impactScores": {
+        "complexity": 85,
+        "featureImpact": 92,
+        "scopeBreadth": 60,
+        "consistency": 75,
+        "volume": 45
+      },
+      "justification": "evidence-based explanation referencing specific commits and code",
+      "keyContributions": ["description referencing actual files and features"],
+      "keyEvidence": [
+        { "sha": "abc1234", "message": "feat: implement feature", "impact": "HIGH", "additions": 204 }
+      ]
+    }
+  ],
+  "invoice": {
+    "id": "INV-2026-${invExample}",
+    "project": "${owner}/${repo}",
+    "generatedAt": "${new Date().toISOString()}",
+    "items": [
+      {
+        "contributor": "name",
+        "description": "what they built (reference real files)",
+        "commits": 23,
+        "linesAdded": 1847,
+        "linesDeleted": 423,
+        "topFiles": ["file1.sol", "file2.ts"],
+        "impactRating": "HIGH",
+        "amount": 480
+      }
+    ],
+    "total": ${totalBudget},
+    "currency": "USDT"
+  },
+  "aiSummary": "2-3 sentence summary of the analysis highlighting who leads in what dimensions"
+}`;
+
+  return { system, user };
+}
+
+function parseJsonFromLlmText(text: string): Record<string, unknown> {
+  const cleaned = text
+    .replace(/```json\n?/g, "")
+    .replace(/```\n?/g, "")
+    .trim();
+  return JSON.parse(cleaned) as Record<string, unknown>;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { repoUrl, totalBudget = 1200, branch = "main" } = await req.json();
@@ -389,116 +493,115 @@ ${top5
       })
       .join("\n");
 
-    let result;
+    // LLM JSON (OpenAI and/or Anthropic) + server enrichments
+    let result: Record<string, unknown> | null = null;
+    let llmError: string | undefined;
+    let llmJsonOk = false;
+    let llmProvider: LlmProviderName | null = null;
 
-    if (ANTHROPIC_API_KEY) {
-      try {
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 2500,
-            system: `You are the AI payment agent for SplitSettl on HashKey Chain. You analyze REAL GitHub commits with actual code diffs to determine fair payment splits based on IMPACT, not just quantity.
-
-The commit list you receive EXCLUDES bots, CI accounts, dependency bots (Dependabot/Renovate/etc.), and typical automated/AI commit identities — only human contributors are in scope for payment.
-
-CRITICAL SCORING PHILOSOPHY:
-- A contributor with 5 high-complexity commits (new smart contract, security fix, core algorithm) should receive MORE than someone with 20 low-complexity commits (documentation edits, config changes, formatting fixes)
-- Quality of code matters more than quantity of commits
-- New feature implementation is weighted highest
-- Security-related changes are weighted very high
-- Smart contract code (.sol files) is weighted higher than frontend or config
-- Test code is valuable but weighted less than the code it tests
-- Documentation is valuable but weighted least
-
-For each contributor, evaluate 5 dimensions on a 0-100 scale:
-- complexity: How technically complex is their code? (algorithms, smart contracts = high; config, docs = low)
-- featureImpact: Did they build new capabilities or make minor tweaks? (new features, critical fixes = high; typos, formatting = low)
-- scopeBreadth: How many different areas of the codebase did they affect? (many modules = high; single file = low)
-- consistency: Was their work spread over time or one big dump? (steady cadence = high; single burst = low)
-- volume: Raw output quantity (highest commit count and lines = high, BUT this dimension matters LEAST)
-
-Assign an overall impactRating: "HIGH", "MEDIUM", or "LOW".
-
-For each contributor, cite 1-2 specific commits (by SHA) as key evidence for your assessment.
-
-The percentage splits MUST sum to exactly 100. The total budget is $${totalBudget}.
-
-Respond ONLY with valid JSON. No markdown, no backticks, no preamble.`,
-            messages: [
-              {
-                role: "user",
-                content: `Analyze real contributions for ${owner}/${repo} (branch: ${branch}) and generate a payment split:
-
-${context}
-
-Return this exact JSON structure:
-{
-  "repository": "${owner}/${repo}",
-  "branch": "${branch}",
-  "commitsAnalyzed": ${humanCommits.length},
-  "splits": [
-    {
-      "name": "author name",
-      "percentage": 40,
-      "impactRating": "HIGH",
-      "impactScores": {
-        "complexity": 85,
-        "featureImpact": 92,
-        "scopeBreadth": 60,
-        "consistency": 75,
-        "volume": 45
-      },
-      "justification": "evidence-based explanation referencing specific commits and code",
-      "keyContributions": ["description referencing actual files and features"],
-      "keyEvidence": [
-        { "sha": "abc1234", "message": "feat: implement feature", "impact": "HIGH", "additions": 204 }
-      ]
+    let providerPref = (process.env.AI_ANALYSIS_PROVIDER || "auto")
+      .trim()
+      .toLowerCase();
+    if (!["openai", "anthropic", "auto"].includes(providerPref)) {
+      providerPref = "auto";
     }
-  ],
-  "invoice": {
-    "id": "INV-2026-${Math.floor(Math.random() * 9000 + 1000)}",
-    "project": "${owner}/${repo}",
-    "generatedAt": "${new Date().toISOString()}",
-    "items": [
-      {
-        "contributor": "name",
-        "description": "what they built (reference real files)",
-        "commits": 23,
-        "linesAdded": 1847,
-        "linesDeleted": 423,
-        "topFiles": ["file1.sol", "file2.ts"],
-        "impactRating": "HIGH",
-        "amount": 480
-      }
-    ],
-    "total": ${totalBudget},
-    "currency": "USDT"
-  },
-  "aiSummary": "2-3 sentence summary of the analysis highlighting who leads in what dimensions"
-}`,
-              },
-            ],
-          }),
-        });
+    const { system: systemPrompt, user: userPrompt } = buildAnalysisLlmPrompts(
+      owner,
+      repo,
+      branch,
+      humanCommits.length,
+      context,
+      totalBudget
+    );
 
-        if (response.ok) {
-          const data = await response.json();
-          const text = data.content?.[0]?.text || "";
-          const cleaned = text
-            .replace(/```json\n?/g, "")
-            .replace(/```\n?/g, "")
-            .trim();
-          result = JSON.parse(cleaned);
-        }
-      } catch (e) {
-        console.error("Claude API error:", e);
+    const callOpenAI = async () => {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: OPENAI_MODEL,
+          temperature: 0.2,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+        }),
+      });
+      if (response.ok) {
+        const data = (await response.json()) as {
+          choices?: Array<{ message?: { content?: string } }>;
+        };
+        const text = data.choices?.[0]?.message?.content || "";
+        result = parseJsonFromLlmText(text);
+        llmJsonOk = true;
+        llmProvider = "openai";
+      } else {
+        const errText = await response.text();
+        const err = `OpenAI HTTP ${response.status}: ${errText.slice(0, 500)}`;
+        console.error("[analyze] OpenAI API error:", err);
+        llmError = llmError ? `${llmError} | ${err}` : err;
       }
+    };
+
+    const callAnthropic = async () => {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 2500,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userPrompt }],
+        }),
+      });
+      if (response.ok) {
+        const data = (await response.json()) as {
+          content?: Array<{ text?: string }>;
+        };
+        const text = data.content?.[0]?.text || "";
+        result = parseJsonFromLlmText(text);
+        llmJsonOk = true;
+        llmProvider = "anthropic";
+      } else {
+        const errText = await response.text();
+        const err = `Anthropic HTTP ${response.status}: ${errText.slice(0, 500)}`;
+        console.error("[analyze] Anthropic API error:", err);
+        llmError = llmError ? `${llmError} | ${err}` : err;
+      }
+    };
+
+    try {
+      if (providerPref === "openai") {
+        if (OPENAI_API_KEY) await callOpenAI();
+        else
+          llmError = "AI_ANALYSIS_PROVIDER=openai but OPENAI_API_KEY is missing";
+      } else if (providerPref === "anthropic") {
+        if (ANTHROPIC_API_KEY) await callAnthropic();
+        else
+          llmError =
+            "AI_ANALYSIS_PROVIDER=anthropic but ANTHROPIC_API_KEY is missing";
+      } else {
+        // auto: prefer OpenAI when key present, else Anthropic
+        if (OPENAI_API_KEY) await callOpenAI();
+        if (!llmJsonOk && ANTHROPIC_API_KEY) await callAnthropic();
+        if (!OPENAI_API_KEY && !ANTHROPIC_API_KEY) {
+          console.warn(
+            "[analyze] No OPENAI_API_KEY or ANTHROPIC_API_KEY — using GitHub-only fallback. Add a key to frontend/.env.local and restart next dev."
+          );
+        }
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      llmError = llmError ? `${llmError} | ${msg}` : msg;
+      console.error("[analyze] LLM error:", e);
     }
 
     // If Claude failed or no key, build result from GitHub data directly
@@ -510,10 +613,16 @@ Return this exact JSON structure:
         humanCommits,
         contributors,
         totalBudget
-      );
+      ) as unknown as Record<string, unknown>;
     }
 
     result.commitsAnalyzed = humanCommits.length;
+    result.analysisSource = llmJsonOk
+      ? llmProvider ?? "fallback"
+      : "fallback";
+    if (llmError) {
+      result.analysisError = llmError;
+    }
 
     // Attach visualization data
     result.visualizationData = {
@@ -567,7 +676,22 @@ Return this exact JSON structure:
 
     // Ensure all splits have required fields
     if (result.splits) {
-      for (const split of result.splits) {
+      type SplitMut = Record<string, unknown> & {
+        name?: string;
+        impactScores?: {
+          complexity: number;
+          featureImpact: number;
+          scopeBreadth: number;
+          consistency: number;
+          volume: number;
+        };
+        impactRating?: string;
+        keyEvidence?: unknown[];
+        walletAddress?: string;
+        walletAddressSource?: string;
+        walletAddressCommitEvidence?: unknown;
+      };
+      for (const split of result.splits as SplitMut[]) {
         if (!split.impactScores) {
           const contributor = contributors.find((c) => c.name === split.name);
           if (contributor) {
@@ -592,10 +716,10 @@ Return this exact JSON structure:
         // 1) .splitsettle.json (GitHub login → address)
         const contributor = contributors.find((c) => c.name === split.name);
         if (splitSettleConfig?.contributors) {
-          const login = contributor?.login || split.name;
+          const login = contributor?.login || split.name || "";
           const addr =
             splitSettleConfig.contributors[login] ||
-            splitSettleConfig.contributors[split.name];
+            (split.name && splitSettleConfig.contributors[split.name]);
           if (addr) {
             split.walletAddress = addr;
             split.walletAddressSource = "splitsettle";
@@ -617,20 +741,22 @@ Return this exact JSON structure:
     }
 
     const anySplitHasWallet =
-      result.splits?.some((s: { walletAddress?: string }) => !!s.walletAddress) ??
-      false;
+      (result.splits as { walletAddress?: string }[] | undefined)?.some(
+        (s) => !!s.walletAddress
+      ) ?? false;
     result.hasAddressConfig =
       (splitSettleConfig !== null &&
         Object.keys(splitSettleConfig.contributors || {}).length > 0) ||
       anySplitHasWallet;
 
     // Ensure all invoice items have impactRating
-    if (result.invoice?.items) {
-      for (const item of result.invoice.items) {
+    const invoiceItems = (result.invoice as { items?: Array<Record<string, unknown>> } | undefined)
+      ?.items;
+    if (invoiceItems) {
+      const splitsList = result.splits as Array<{ name?: string; impactRating?: string }> | undefined;
+      for (const item of invoiceItems) {
         if (!item.impactRating) {
-          const split = result.splits?.find(
-            (s: { name: string }) => s.name === item.contributor
-          );
+          const split = splitsList?.find((s) => s.name === item.contributor);
           item.impactRating = split?.impactRating || "MEDIUM";
         }
       }

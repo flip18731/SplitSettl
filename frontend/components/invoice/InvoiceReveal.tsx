@@ -6,7 +6,7 @@ import MiniRadar from "./shared/MiniRadar";
 import EvidenceLink from "./shared/EvidenceLink";
 import WalletAddressProvenance from "./shared/WalletAddressProvenance";
 import { shortenAddress } from "@/lib/wallet";
-import { formatNumberEnUS } from "@/lib/format";
+import { displayFirstName, formatNumberEnUS } from "@/lib/format";
 
 const RANK_COLORS = ["#2DD4A8", "#F59E42", "#8B93A8", "rgba(45,212,168,0.5)", "#5A6275"];
 
@@ -76,6 +76,29 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
                 )}
                 <span className="text-[11px] text-text-tertiary">{dateStr}</span>
               </div>
+              {result.analysisSource === "fallback" && (
+                <p className="text-[11px] text-accent-orange mt-3 leading-relaxed max-w-xl">
+                  <strong>Fallback-Modus:</strong> Weder OpenAI noch Anthropic hat erfolgreich geantwortet —
+                  Splits stammen aus Zeilenstatistik + Heuristik. Prüfe{" "}
+                  <code className="text-[10px] bg-bg-elevated px-1 rounded">OPENAI_API_KEY</code> oder{" "}
+                  <code className="text-[10px] bg-bg-elevated px-1 rounded">ANTHROPIC_API_KEY</code> in{" "}
+                  <code className="text-[10px] bg-bg-elevated px-1 rounded">frontend/.env.local</code>, optional{" "}
+                  <code className="text-[10px] bg-bg-elevated px-1 rounded">AI_ANALYSIS_PROVIDER</code>, und
+                  Server-Neustart.
+                  {result.analysisError && (
+                    <span className="block font-mono text-[10px] mt-1.5 text-text-secondary break-all">
+                      {result.analysisError}
+                    </span>
+                  )}
+                </p>
+              )}
+              {(result.analysisSource === "openai" ||
+                result.analysisSource === "anthropic") && (
+                <p className="text-[10px] text-text-tertiary mt-2 font-mono">
+                  Analyse:{" "}
+                  {result.analysisSource === "openai" ? "OpenAI" : "Anthropic Claude"}
+                </p>
+              )}
             </div>
             <div className="text-right">
               <p className="text-[13px] font-mono font-semibold text-text-primary">
@@ -119,7 +142,7 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
                         )}
                         <div>
                           <p className="text-[13px] font-semibold text-text-primary">
-                            {item.contributor}
+                            {displayFirstName(item.contributor)}
                           </p>
                           <p className="text-[11px] text-text-secondary mt-0.5">
                             {item.commits} commits &middot; +
@@ -243,7 +266,7 @@ export default function InvoiceReveal({ result, onApprove, onReset }: Props) {
                 <div key={i}>
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="text-[13px] font-semibold text-text-primary">
-                      {split.name}
+                      {displayFirstName(split.name)}
                     </span>
                     <span
                       className="text-[12px] font-bold"

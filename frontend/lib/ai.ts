@@ -107,6 +107,17 @@ export interface AIInvoice {
   currency: string;
 }
 
+/** Real HashKey Merchant (HSP) checkout session when order creation succeeds. */
+export interface HspCheckoutSession {
+  /** Cart / invoice id (cart mandate id or local invoice id fallback). */
+  cartMandateId: string;
+  paymentRequestId: string;
+  paymentUrl: string | null;
+  flowId: string | null;
+  /** Raw gateway JSON (debug / future UI) */
+  raw?: unknown;
+}
+
 export interface AIAnalysisResult {
   repository: string;
   branch: string;
@@ -117,4 +128,12 @@ export interface AIAnalysisResult {
   aiSummary: string;
   codeSnippets: CodePatch[];
   hasAddressConfig?: boolean; // true if .splitsettle.json was found in the repo
+  /** Set by /api/ai/analyze: which LLM ran, or GitHub-only fallback */
+  analysisSource?: "openai" | "anthropic" | "fallback";
+  /** If an LLM was expected but failed (HTTP/parse); optional debug hint */
+  analysisError?: string;
+  /** Optional — populated by `/api/hsp/create-order` on the client, not by analyze. */
+  hsp?: HspCheckoutSession | null;
+  /** Non-fatal error string if HSP order could not be created */
+  hspError?: string;
 }

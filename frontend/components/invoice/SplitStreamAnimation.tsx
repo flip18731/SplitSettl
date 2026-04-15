@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import type { AISplit } from "@/lib/ai";
-import { formatNumberEnUS } from "@/lib/format";
+import { displayFirstName, formatNumberEnUS } from "@/lib/format";
 
 const RANK_COLORS = ["#2DD4A8", "#F59E42", "#8B93A8", "rgba(45,212,168,0.5)", "#5A6275"];
 
@@ -62,7 +62,7 @@ export default function SplitStreamAnimation({
         completeFired.current = true;
         onComplete();
       }
-    }, 400 + sorted.length * 400 + 3500);
+    }, 400 + sorted.length * 400 + 6500);
 
     return () => {
       timers.forEach(clearTimeout);
@@ -121,7 +121,7 @@ export default function SplitStreamAnimation({
                   fontWeight="600"
                   fontFamily="Plus Jakarta Sans, sans-serif"
                 >
-                  {split.name.split(" ")[0]}
+                  {displayFirstName(split.name)}
                 </text>
                 <text
                   x="10"
@@ -158,7 +158,7 @@ export default function SplitStreamAnimation({
                       fontSize="11"
                       fontFamily="Plus Jakarta Sans, sans-serif"
                     >
-                      {split.name}
+                      {displayFirstName(split.name)}
                     </text>
                   </g>
                 )}

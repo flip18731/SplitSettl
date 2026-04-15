@@ -10,6 +10,9 @@ import InvoiceReveal from "./InvoiceReveal";
 
 type Phase = "fetching" | "scanning" | "radar" | "streaming" | "invoice";
 
+/** Minimum time on the code-scan view so it does not flash past before the next phase. */
+const MIN_SCAN_MS = 5500;
+
 interface Props {
   result: AIAnalysisResult | null;
   repoSlug: string;
@@ -70,7 +73,7 @@ export default function AnalysisJourney({
   useEffect(() => {
     if (phase !== "scanning" || !result) return;
     const elapsed = Date.now() - scanStartRef.current;
-    const remaining = Math.max(0, 3000 - elapsed);
+    const remaining = Math.max(0, MIN_SCAN_MS - elapsed);
     const t = setTimeout(() => setPhase("radar"), remaining);
     return () => clearTimeout(t);
   }, [phase, result]);
@@ -113,8 +116,12 @@ export default function AnalysisJourney({
 
       {/* Phase 1: Fetch Steps */}
       {phase === "fetching" && (
-        <div className="animate-fade-in">
-          <FetchSteps repoSlug={repoSlug} branch={branch} />
+        <div className="animate-fade-in space-y-3">
+          <FetchSteps
+            repoSlug={repoSlug}
+            branch={branch}
+            hasAnalysisResult={!!result}
+          />
         </div>
       )}
 

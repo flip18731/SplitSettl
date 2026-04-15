@@ -1,7 +1,7 @@
 "use client";
 
 import { usePayments } from "@/hooks/usePayments";
-import { formatNumberEnUS } from "@/lib/format";
+import { displayFirstName, formatNumberEnUS } from "@/lib/format";
 import StatusBadge from "@/components/shared/StatusBadge";
 import HSPStepDots from "@/components/shared/HSPStepDots";
 import Card, { CardHeader } from "@/components/shared/Card";
@@ -20,7 +20,7 @@ function formatTime(date: Date): string {
 }
 
 function contributorNames(contribs: { name: string }[]): string {
-  return contribs.map((c) => c.name).join(", ");
+  return contribs.map((c) => displayFirstName(c.name)).join(", ");
 }
 
 export default function PaymentFeed() {

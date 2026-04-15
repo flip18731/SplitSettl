@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { CodePatch } from "@/lib/ai";
-import { formatNumberEnUS } from "@/lib/format";
+import { displayFirstName, formatNumberEnUS } from "@/lib/format";
 
 interface CodeLine {
   text: string;
@@ -132,7 +132,7 @@ export default function CodeScanAnimation({
       }, lineInterval * (i + 1))
     );
 
-    snippetTimerRef.current = setTimeout(advanceSnippet, 2800);
+    snippetTimerRef.current = setTimeout(advanceSnippet, 4200);
 
     return () => {
       timers.forEach(clearTimeout);
@@ -209,7 +209,7 @@ export default function CodeScanAnimation({
               {current.file}
             </span>
             <span className="text-[10px] text-text-tertiary shrink-0">
-              · {current.author}
+              · {displayFirstName(current.author)}
             </span>
           </div>
 

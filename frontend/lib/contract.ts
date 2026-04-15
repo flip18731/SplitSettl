@@ -33,6 +33,12 @@ export const USDC_MAINNET = "0x054ed45810DbBAb8B27668922D110669c9D88D0a";
 // Testnet MockUSDT (deployed via scripts/deploy.ts)
 export const MOCK_USDT_ADDRESS = process.env.NEXT_PUBLIC_MOCK_USDT_ADDRESS || "";
 
+/** Official HashKey testnet tokens (HSP Merchant / x402 — use when not using a local MockUSDT). */
+export const HSP_USDT_HASHKEY_TESTNET =
+  "0x372325443233fEbaC1F6998aC750276468c83CC6";
+export const HSP_USDC_HASHKEY_TESTNET =
+  "0x79AEc4EeA31D50792F61D1Ca0733C18c89524C9e";
+
 /** Returns the chain config for the currently active network. */
 export function getActiveChainConfig() {
   return process.env.NEXT_PUBLIC_CHAIN_ID === "177"
@@ -42,9 +48,13 @@ export function getActiveChainConfig() {
 
 /** Returns the USDT address for the currently active network. */
 export function getUSDTAddress(): string {
-  return process.env.NEXT_PUBLIC_CHAIN_ID === "177"
-    ? USDT_MAINNET
-    : MOCK_USDT_ADDRESS;
+  if (process.env.NEXT_PUBLIC_CHAIN_ID === "177") {
+    return USDT_MAINNET;
+  }
+  // Testnet: explicit MockUSDT deploy, optional overrides, else HSP gateway USDT (official docs)
+  const mock = process.env.NEXT_PUBLIC_MOCK_USDT_ADDRESS?.trim();
+  const hspOverride = process.env.NEXT_PUBLIC_HSP_USDT_ADDRESS?.trim();
+  return mock || hspOverride || HSP_USDT_HASHKEY_TESTNET;
 }
 
 export const CONTRACT_ABI = [

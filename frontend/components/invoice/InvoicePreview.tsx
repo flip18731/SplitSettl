@@ -1,7 +1,7 @@
 "use client";
 
 import type { AIAnalysisResult } from "@/lib/ai";
-import { formatNumberEnUS } from "@/lib/format";
+import { displayFirstName, formatNumberEnUS } from "@/lib/format";
 
 export default function InvoicePreview({ result }: { result: AIAnalysisResult }) {
   const { invoice, splits } = result;
@@ -75,7 +75,7 @@ export default function InvoicePreview({ result }: { result: AIAnalysisResult })
               <tr key={i} className="border-t border-bg-elevated align-top">
                 <td className="py-3 pr-4">
                   <p className="text-[13px] font-semibold text-text-primary">
-                    {item.contributor}
+                    {displayFirstName(item.contributor)}
                   </p>
                   <p className="text-[11px] text-text-secondary mt-0.5">
                     {item.commits} commits · +{formatNumberEnUS(item.linesAdded)} / -{formatNumberEnUS(item.linesDeleted)}
@@ -134,7 +134,7 @@ export default function InvoicePreview({ result }: { result: AIAnalysisResult })
             <div key={i}>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-[13px] font-semibold text-text-primary">
-                  {split.name}
+                  {displayFirstName(split.name)}
                 </span>
                 <span className="text-[12px] font-bold text-accent-teal">
                   {split.percentage}%
