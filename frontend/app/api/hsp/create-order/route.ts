@@ -13,6 +13,63 @@ import { displayFirstName } from "@/lib/format";
 
 export const runtime = "nodejs";
 
+/** Strip control chars — odd Unicode can trip gateway validation. */
+function sanitizeHspLabel(s: string, maxLen: number): string {
+  return s
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLen);
+}
+
+/**
+ * Line amounts + total must match exactly or HSP returns 10001 ("invalid request parameters").
+ * Use integer cents per line; total = sum(cents) — avoids float drift and NaN.toFixed("NaN").
+ */
+function buildReconciledDisplay(
+  invoice: AIInvoice,
+  displayCurrency: string
+): { displayItems: HspDisplayItem[]; amountStr: string } | { error: string } {
+  const items = invoice.items;
+  if (!Array.isArray(items) || items.length === 0) {
+    return { error: "Invoice has no line items" };
+  }
+
+  const centsPerLine = items.map((item) => {
+    const n = Number(item.amount);
+    if (!Number.isFinite(n) || n < 0) {
+      return 0;
+    }
+    return Math.round(n * 100);
+  });
+
+  const totalCents = centsPerLine.reduce((a, b) => a + b, 0);
+  if (totalCents <= 0) {
+    return {
+      error:
+        "Invalid invoice amounts (sum is zero or negative). Re-run analysis or check line amounts.",
+    };
+  }
+
+  const displayItems: HspDisplayItem[] = items.map((item, i) => {
+    const desc = (item.description || "Work").slice(0, 80);
+    const rawLabel = `${displayFirstName(item.contributor)}: ${desc}`;
+    const label = sanitizeHspLabel(rawLabel, 200) || "Line item";
+    return {
+      label,
+      amount: {
+        currency: displayCurrency,
+        value: (centsPerLine[i]! / 100).toFixed(2),
+      },
+    };
+  });
+
+  return {
+    displayItems,
+    amountStr: (totalCents / 100).toFixed(2),
+  };
+}
+
 type Body = {
   invoice: AIInvoice;
   payTo?: string;
@@ -72,18 +129,16 @@ export async function POST(req: NextRequest) {
   /** Same currency on every line + total — mixed USD/USDT caused HSP 10001. */
   const displayCurrency = (invoice.currency || "USD").trim() || "USD";
 
-  const displayItems: HspDisplayItem[] = invoice.items.map((item) => ({
-    label: `${displayFirstName(item.contributor)}: ${(item.description || "Work").slice(0, 80)}`,
-    amount: {
-      currency: displayCurrency,
-      value: Number(item.amount).toFixed(2),
-    },
-  }));
+  const reconciled = buildReconciledDisplay(invoice, displayCurrency);
+  if ("error" in reconciled) {
+    return NextResponse.json(
+      { error: reconciled.error, fallback: true },
+      { status: 400 }
+    );
+  }
+  const { displayItems, amountStr } = reconciled;
 
   const paymentRequestId = `PAY-${invoice.id}`;
-  /** Sum of line items must match `details.total` or HSP returns 10001. */
-  const lineSum = invoice.items.reduce((s, item) => s + Number(item.amount ?? 0), 0);
-  const amountStr = lineSum.toFixed(2);
 
   try {
     const contents = buildCartMandateContents({

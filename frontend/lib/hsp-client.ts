@@ -80,6 +80,27 @@ export const HSP_TOKENS = {
   },
 } as const;
 
+/**
+ * Token `contract_address` in x402 payload. Defaults follow current Merchant guidance;
+ * override if QA only whitelists a different contract (see `.env.example`).
+ */
+function resolveTokenContractAddress(
+  net: "testnet" | "mainnet",
+  coin: "USDC" | "USDT"
+): string {
+  const defaults = HSP_TOKENS[net][coin];
+  const env =
+    net === "testnet"
+      ? coin === "USDC"
+        ? process.env.HSP_USDC_ADDRESS_TESTNET?.trim()
+        : process.env.HSP_USDT_ADDRESS_TESTNET?.trim()
+      : coin === "USDC"
+        ? process.env.HSP_USDC_ADDRESS_MAINNET?.trim()
+        : process.env.HSP_USDT_ADDRESS_MAINNET?.trim();
+  if (env && isAddress(env)) return env;
+  return defaults.address;
+}
+
 function toPublicApiPath(merchantPath: string): string {
   return merchantPath
     .replace("/api/v1/merchant/orders/reusable", "/api/v1/public/cart-mandate/multi-pay")
@@ -175,11 +196,14 @@ export type BuildCartParams = {
 
 /** Build `cart_mandate.contents` — must match what you sign in `createMerchantJWT`. */
 export function buildCartMandateContents(params: BuildCartParams): Record<string, unknown> {
-  /** Chain-config `name` for HashKey Chain testnet (see Merchant API chain-config / docs). */
-  const network = params.isTestnet ? "hashkeytestnet" : "hashkey";
+  /**
+   * Must match Merchant API / chain-config (same as `frontend/lib/chains.ts` `network`).
+   * `hashkeytestnet` (no hyphen) causes gateway `10001` on QA for some builds.
+   */
+  const network = params.isTestnet ? "hashkey-testnet" : "hashkey";
   const chainId = params.isTestnet ? 133 : 177;
-  const tokens = params.isTestnet ? HSP_TOKENS.testnet : HSP_TOKENS.mainnet;
-  const token = tokens[params.coin];
+  const netKey = params.isTestnet ? "testnet" : "mainnet";
+  const tokenAddr = resolveTokenContractAddress(netKey, params.coin);
 
   return {
     id: params.invoiceId,
@@ -192,7 +216,7 @@ export function buildCartMandateContents(params: BuildCartParams): Record<string
             x402Version: 2,
             network,
             chain_id: chainId,
-            contract_address: checksumAddr(token.address),
+            contract_address: checksumAddr(tokenAddr),
             pay_to: checksumAddr(params.payTo),
             coin: params.coin,
           },
